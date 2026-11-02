@@ -2,10 +2,12 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Advanced_Combat_Tracker;
 using AugurACT.Core.Encounters;
+using AugurACT.Ui;
 
 namespace AugurACT.Plugin
 {
@@ -20,9 +22,15 @@ namespace AugurACT.Plugin
             status = pluginStatusText;
             pluginDir = ActGlobals.oFormActMain.PluginGetSelfData(this).pluginFile.DirectoryName;
 
-            // Must be registered before any method touching WebView2 or Core types is JIT-compiled.
+            // ACT loads plugins from raw bytes, so .NET can't probe the plugin's folder for dependencies.
             AppDomain.CurrentDomain.AssemblyResolve += ResolveFromPluginDir;
+            Start(pluginScreenSpace);
+        }
 
+        // Kept out of InitPlugin so JIT-compiling that method doesn't load dependencies before the handler exists.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void Start(TabPage pluginScreenSpace)
+        {
             view = new TimelineView(pluginDir, SetStatus) { Dock = DockStyle.Fill };
             pluginScreenSpace.Text = "AugurACT";
             pluginScreenSpace.Controls.Add(view);

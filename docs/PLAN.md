@@ -13,6 +13,10 @@ Turn an EQ2 encounter log into an understanding of the fight:
 Parsing rules are expected to start anecdotal and be tuned against real fights, so rules must be cheap to
 change and easy to re-run against old logs.
 
+**Not another damage graph.** ACT already shows who did what and how much. Every view here should answer
+something ACT doesn't, such as what mattered in the fight and what the boss will do next. How to aggregate the
+data follows from identifying what matters, so that design is deliberately left open for now.
+
 ## Scope
 
 - EverQuest II, English clients only. Other games are not planned, so no game abstraction layer.
@@ -22,12 +26,12 @@ change and easy to re-run against old logs.
 
 Each phase should be usable on its own and checked against real logs.
 
-### Phase 0: Framework (done, pending the first load in ACT)
+### Phase 0: Framework (done)
 
 - [x] Git repo, solution, and build from WSL against the real ACT executable
 - [x] `AugurACT.Core` with no ACT or UI dependency, plus unit tests
 - [x] Plugin entry point, WebView2 tab, and a message path from ACT to the page
-- [ ] Load in ACT and check the items under "Verify in ACT" below
+- [x] Load in ACT and show parsed encounters in the tab (see "Verify in ACT" for what remains)
 
 ### Phase 1: Log normalization
 
@@ -72,19 +76,24 @@ Identify the boss and split logs into pulls, using NPC instance IDs, zone change
 
 These can't be checked without running inside ACT:
 
-- [ ] The plugin loads and finds its dependencies from its own folder.
-- [ ] A net48 plugin loads under ACT's declared .NET 4.7 runtime (see Architecture).
-- [ ] WebView2 renders in the tab, in both `Advanced Combat Tracker.exe` and `ACTx86.exe` if the latter is used.
-- [ ] `EncounterData.LogLines` is populated when `OnCombatEnd` fires. The table's "Lines parsed" column
-      shows this: a total of 0 or a low parsed count means the assumption is wrong.
-- [ ] Disabling and re-enabling the plugin works without restarting ACT.
+- [x] The plugin loads and finds its dependencies from its own folder.
+- [x] A net48 plugin loads under ACT's declared .NET 4.7 runtime (see Architecture).
+- [x] WebView2 renders in the tab under `Advanced Combat Tracker.exe`.
+- [ ] WebView2 renders in the tab under `ACTx86.exe`, if that is ever used.
+- [x] `EncounterData.LogLines` is populated when `OnCombatEnd` fires. Every encounter in the first test parsed
+      all of its lines, up to 837,508 lines in one encounter.
+- [x] Disabling and re-enabling the plugin works without restarting ACT. The list starts empty again, because
+      encounters are only captured as ACT finishes them.
 
 ## Open questions
 
 - **Data source:** is ACT's in-memory encounter enough, or should analysis also read log files directly to
   reach older fights? ACT also keeps a history database worth examining.
+- **Encounters finished before the plugin was enabled:** these aren't listed, and the list is lost on re-enable.
+  Check whether they can be read from ACT's in-memory encounter list.
 - **Which encounter to analyze:** every encounter automatically, or only ones the user picks? Automatic
   analysis of trash fights may be wasted work.
-- **Multi-mob fights:** ACT's encounter boundaries may not match a logical boss fight with adds.
+- **Multi-mob fights:** ACT's encounter boundaries may not match a logical boss fight with adds. ACT already
+  produces titles like `Illicus, Zon Zobboz Swarmer`, and trash pulls appear as encounters of their own.
 - **Rule storage:** where tuned rules live, and whether they should be shareable.
 - **License and hosting:** not chosen yet.

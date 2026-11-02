@@ -26,8 +26,8 @@ Builds and tests work from WSL or Windows. Tests cover `AugurACT.Core` only and 
 ## Install in ACT
 
 ACT needs a Windows path, so copy the build output somewhere Windows can reach. Setting `AugurDeployDir` in
-`Directory.Build.local.props` does this on every build. Close ACT or disable the plugin first, because a
-loaded plugin locks its DLLs.
+`Directory.Build.local.props` does this on every build. Close ACT first, because a running plugin locks its
+dependency DLLs.
 
 1. Copy everything in `src/AugurACT.Plugin/bin/Debug/net48/` into its own folder, such as
    `%APPDATA%\Advanced Combat Tracker\Plugins\AugurACT\`.

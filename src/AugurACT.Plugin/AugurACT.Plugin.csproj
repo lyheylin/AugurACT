@@ -14,9 +14,8 @@
       <HintPath>$(ActExe)</HintPath>
       <Private>false</Private>
     </Reference>
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
     <ProjectReference Include="..\AugurACT.Core\AugurACT.Core.csproj" />
-    <None Update="web\**" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="..\AugurACT.Ui\AugurACT.Ui.csproj" />
   </ItemGroup>
 
   <Target Name="CheckActDir" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(ActExe)')">

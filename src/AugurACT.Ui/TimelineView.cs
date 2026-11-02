@@ -5,9 +5,9 @@ using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
-namespace AugurACT.Plugin
+namespace AugurACT.Ui
 {
-    internal sealed class TimelineView : UserControl
+    public sealed class TimelineView : UserControl
     {
         private const string VirtualHost = "augur.act";
 
