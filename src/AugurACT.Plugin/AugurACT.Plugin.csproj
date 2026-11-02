@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>AugurACT</AssemblyName>
+    <RootNamespace>AugurACT.Plugin</RootNamespace>
+    <AssemblyTitle>AugurACT</AssemblyTitle>
+    <Description>Analyzes EverQuest II encounters: key events, boss behavior, timeline and trigger regexes.</Description>
+    <ActExe>$(ActDir)/Advanced Combat Tracker.exe</ActExe>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="Advanced Combat Tracker">
+      <HintPath>$(ActExe)</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <ProjectReference Include="..\AugurACT.Core\AugurACT.Core.csproj" />
+    <None Update="web\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CheckActDir" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(ActExe)')">
+    <Error Text="Advanced Combat Tracker.exe not found at '$(ActExe)'. Copy Directory.Build.local.props.example to Directory.Build.local.props and set ActDir." />
+  </Target>
+
+  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(AugurDeployDir)' != ''">
+    <ItemGroup>
+      <DeployFile Include="$(OutDir)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DeployFile)" DestinationFolder="$(AugurDeployDir)\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

@@ -1,0 +1,10 @@
+<!-- Copy to Directory.Build.local.props (gitignored) and adjust for this machine. -->
+<Project>
+  <PropertyGroup>
+    <!-- Folder containing "Advanced Combat Tracker.exe". WSL: /mnt/d/...  Windows: D:\... -->
+    <ActDir>/mnt/d/Advanced Combat Tracker</ActDir>
+
+    <!-- Optional: copy the built plugin here after each build. ACT must not have it loaded. -->
+    <!-- <AugurDeployDir>/mnt/c/Users/YOU/AppData/Roaming/Advanced Combat Tracker/Plugins/AugurACT</AugurDeployDir> -->
+  </PropertyGroup>
+</Project>

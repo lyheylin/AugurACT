@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+TestResults/
+
+# Machine-specific build paths
+Directory.Build.local.props
+
+# Real logs contain other players' names and private chat; use synthetic fixtures
+*.log
+eq2log_*.txt
