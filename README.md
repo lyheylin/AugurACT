@@ -4,8 +4,8 @@ An [Advanced Combat Tracker](https://advancedcombattracker.com/) plugin for Ever
 parsed encounters to find key events and boss behavior patterns, shows them on an interactive timeline,
 and produces trigger regexes.
 
-**Status:** base framework. The plugin shows a table of finished encounters; the analysis and the timeline
-are not built yet. See [the plan](docs/PLAN.md).
+**Status:** early. The plugin shows a table of finished encounters and the log parser is taking shape; the
+analysis and the timeline are not built yet. See [the plan](docs/PLAN.md).
 
 ## Requirements
 
@@ -22,6 +22,14 @@ dotnet test
 ```
 
 Builds and tests work from WSL or Windows. Tests cover `AugurACT.Core` only and need no ACT install.
+
+## Analyze a saved log
+
+```sh
+dotnet run --project src/AugurACT.Cli -- "/path/to/eq2log_Character.txt"
+```
+
+This prints counts per event type, NPCs with speech or emotes, and the most common unrecognized lines.
 
 ## Install in ACT
 

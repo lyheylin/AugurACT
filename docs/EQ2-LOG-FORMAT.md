@@ -53,7 +53,7 @@ Numbers appear scaled (`1.2B`) and in full (`7,438,675,968`, `476528345`), somet
 ## Boss behavior signals
 
 These lines are rare, and they're the most valuable for this plugin. In the sampled raid, the boss produced
-only 621 linked lines, among millions of others.
+only 423 linked lines, among millions of others.
 
 ### Telegraphs
 
@@ -105,5 +105,9 @@ Boss-named lines are often not boss actions:
   about 370,000 lines, and each cast hits many players. Group lines by timestamp to count casts.
 - Ability tiers look like separate abilities: `Channeled Fury I` to `IV`. These may be one mechanic, so
   decide whether to merge them per boss.
+
+Most lines the parser doesn't recognize are this kind of flavor text from player abilities, plus lines like
+`Player's Ability regenerates N points of absorption.` In the sampled log, 17% of lines fell into this group.
+They haven't been reviewed for boss mechanics yet, and some mechanics may only appear here without a link.
 
 Pets include their owner in the name: `Player's puppet's Foretold Barrage multi attacks Boss for ...`.

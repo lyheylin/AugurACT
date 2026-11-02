@@ -33,15 +33,18 @@ Each phase should be usable on its own and checked against real logs.
 - [x] Plugin entry point, WebView2 tab, and a message path from ACT to the page
 - [x] Load in ACT and show parsed encounters in the tab (see "Verify in ACT" for what remains)
 
-### Phase 1: Log normalization
+### Phase 1: Log normalization (in progress)
 
 Turn raw lines into typed events: damage, heal, ward, kill, cure, interrupt, NPC speech and NPC emote.
 
-- Strip `\aNPC`, `\aPC` and `\aITEM` link markup, keeping NPC instance IDs.
-- Parse scaled numbers (`1.2B`, `7,438,675,968`).
-- Add a small command-line tool that runs Core over a saved log file, so rules can be tuned on real logs
-  without launching ACT or the game.
-- Report on lines no rule recognizes; this list drives what to add next.
+- [x] Strip `\aNPC`, `\aPC` and `\aITEM` link markup, keeping NPC instance IDs.
+- [x] Parse scaled numbers (`1.2B`, `7,438,675,968`).
+- [x] Add a command-line tool that runs Core over a saved log file, so rules can be tuned on real logs without
+      launching ACT or the game.
+- [x] Report on lines no rule recognizes; this list drives what to add next.
+- [ ] Review the unrecognized lines (17% of the first log) and decide which matter. The goal isn't 100%
+      coverage, since most are player flavor text.
+- [ ] Check the rules against other bosses and logs.
 
 ### Phase 2: Fight segmentation
 
@@ -72,6 +75,17 @@ Identify the boss and split logs into pulls, using NPC instance IDs, zone change
 - Per-boss notes and overrides in an editable file: rename events, mark them key, or ignore them.
 - Learn which rules should be global and which belong to a specific boss.
 
+## How encounters get analyzed
+
+The user selects an encounter to analyze; nothing runs automatically on every fight. Analysis builds on what
+ACT already provides: its encounter boundaries and the data its parser has generated. It only re-reads raw log
+lines for what ACT doesn't capture, such as NPC emotes and speech.
+
+## Next steps
+
+1. Identify specific logs and encounters to use as references, with their known mechanics.
+2. List common patterns seen in those fights that rules can target.
+
 ## Verify in ACT
 
 These can't be checked without running inside ACT:
@@ -87,12 +101,9 @@ These can't be checked without running inside ACT:
 
 ## Open questions
 
-- **Data source:** is ACT's in-memory encounter enough, or should analysis also read log files directly to
-  reach older fights? ACT also keeps a history database worth examining.
-- **Encounters finished before the plugin was enabled:** these aren't listed, and the list is lost on re-enable.
-  Check whether they can be read from ACT's in-memory encounter list.
-- **Which encounter to analyze:** every encounter automatically, or only ones the user picks? Automatic
-  analysis of trash fights may be wasted work.
+- **Selecting encounters:** pick from ACT's own encounter list, from the plugin's list, or both. Listing
+  ACT's encounters directly would also cover fights that finished before the plugin was enabled, which the
+  plugin's list misses today. Check what ACT exposes.
 - **Multi-mob fights:** ACT's encounter boundaries may not match a logical boss fight with adds. ACT already
   produces titles like `Illicus, Zon Zobboz Swarmer`, and trash pulls appear as encounters of their own.
 - **Rule storage:** where tuned rules live, and whether they should be shareable.
