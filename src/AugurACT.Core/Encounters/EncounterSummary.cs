@@ -43,14 +43,25 @@ namespace AugurACT.Core.Encounters
             foreach (var line in lines)
             {
                 summary.TotalLines++;
-                if (!Eq2LogLine.TryParse(line, out var parsed))
+
+                // Most lines only matter for the time range; a full parse is kept for the few that might be mechanics.
+                long epoch;
+                if (BarrageDetector.MightMatter(line))
+                {
+                    if (!Eq2LogLine.TryParse(line, out var parsed))
+                    {
+                        continue;
+                    }
+
+                    barrages.Feed(parsed!);
+                    epoch = parsed!.EpochSeconds;
+                }
+                else if (!Eq2LogLine.TryReadEpoch(line, out epoch))
                 {
                     continue;
                 }
 
                 summary.ParsedLines++;
-                barrages.Feed(parsed!);
-                var epoch = parsed!.EpochSeconds;
                 if (summary.StartEpoch == null || epoch < summary.StartEpoch)
                 {
                     summary.StartEpoch = epoch;

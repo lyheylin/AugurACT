@@ -8,6 +8,7 @@ window.AugurTimeline = (() => {
   const LANE_HEIGHT = 34;
   const AXIS_HEIGHT = 22;
   const PAD = 12;
+  let instances = 0;
 
   function el(name, attrs, parent) {
     const node = document.createElementNS(SVG, name);
@@ -36,6 +37,7 @@ window.AugurTimeline = (() => {
     const full = { from: -5, to: Math.max(30, fight.end - origin + 5) };
     let view = { ...full };
     let selected = null;
+    const clipId = `plot-clip-${++instances}`;
 
     const height = AXIS_HEIGHT + lanes.length * LANE_HEIGHT + PAD;
     const svg = el('svg', { height, role: 'img', 'aria-label': `Barrage timeline for ${fight.title}` });
@@ -63,9 +65,9 @@ window.AugurTimeline = (() => {
       });
 
       const plot = el('g', {}, svg);
-      const clip = el('clipPath', { id: 'plot-clip' }, svg);
+      const clip = el('clipPath', { id: clipId }, svg);
       el('rect', { x: LABEL_WIDTH, y: 0, width: w - LABEL_WIDTH, height }, clip);
-      plot.setAttribute('clip-path', 'url(#plot-clip)');
+      plot.setAttribute('clip-path', `url(#${clipId})`);
 
       const axis = el('g', { class: 'axis' }, svg);
       const step = niceStep(view.to - view.from, w - LABEL_WIDTH);
@@ -114,7 +116,7 @@ window.AugurTimeline = (() => {
     function describe(cast, start) {
       const at = clock(cast.readiedAt - start);
       const target = cast.target ? ` at ${cast.target}` : '';
-      return `${at} ${cast.npc}${target}: ${cast.outcome}`;
+      return `${at} ${cast.npc}${target}: ${cast.outcome === 'Unresolved' ? 'No release' : cast.outcome}`;
     }
 
     // Zoom about the cursor; drag to pan.

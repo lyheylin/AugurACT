@@ -25,6 +25,9 @@ namespace AugurACT.Ui
             InitializeWebView();
         }
 
+        // Raised on the UI thread with the JSON the page sent through chrome.webview.postMessage.
+        public event Action<string>? MessageReceived;
+
         public void PostMessage(string json)
         {
             if (IsDisposed)
@@ -61,6 +64,7 @@ namespace AugurACT.Ui
                     Path.Combine(pluginDir, "web"),
                     CoreWebView2HostResourceAccessKind.DenyCors);
                 webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
+                webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
                 webView.CoreWebView2.Navigate($"https://{VirtualHost}/index.html");
             }
             catch (Exception ex)
@@ -81,6 +85,17 @@ namespace AugurACT.Ui
             {
                 // The loader stays in the process when ACT disables and re-enables the plugin.
             }
+        }
+
+        private void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            // Only the bundled page may talk to the plugin.
+            if (!e.Source.StartsWith($"https://{VirtualHost}/", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            MessageReceived?.Invoke(e.WebMessageAsJson);
         }
 
         private void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)

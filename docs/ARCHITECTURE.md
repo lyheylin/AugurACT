@@ -15,10 +15,28 @@ tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
 ## Data flow
 
 ```
-EQ2 log -> ACT + EQ2 parser -> OnCombatEnd -> AugurPlugin -> Core (background thread)
-                                                                  |
-                                     web page <- PostWebMessageAsJson <- UI thread
+ACT ZoneList / OnCombatEnd -> EncounterBridge -> page: encounter list
+page: ready, list, analyze, encounter-npcs, update-encounter -> EncounterBridge -> background thread -> Core
+                                                                                    |
+                         page <- PostWebMessageAsJson (UI thread) <- analysis, encounter-data
 ```
+
+The page and plugin exchange small JSON messages, defined in `Core/Host/HostMessages.cs`:
+
+| From page | Plugin answers with |
+| --- | --- |
+| `ready`, `list` | `encounters` (the whole list, newest first) and `encounter-data` |
+| `analyze` (id) | `analysis` (the encounter's summary with its barrages) |
+| `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
+| `update-encounter` (id, bosses) | `encounter-data` with the update's result |
+
+A newly ended encounter arrives as `encounters` with `replace: false`. After a list, the plugin analyzes every
+encounter in the background, newest first; requests from the page go ahead of that queue. Encounter ids are
+built from the zone and encounter start times and ACT's `EncId`, and looked up again in `ZoneList` if needed.
+
+**ACT keeps adding lines after `OnCombatEnd`**, most of all during an import. Enumerating `LogLines` then
+throws "Collection was modified", so the plugin copies lines by index, and treats a cached summary as stale
+when the encounter's line count has changed since.
 
 ## Design rules
 
@@ -26,8 +44,8 @@ EQ2 log -> ACT + EQ2 parser -> OnCombatEnd -> AugurPlugin -> Core (background th
 without ACT or the game. This is what makes anecdotal rule tuning practical. The plugin only adapts ACT's
 data and hosts the UI.
 
-**Don't block ACT's parse thread.** The handler copies what it needs, does the work in a background task,
-and returns to the UI thread through ACT's main form.
+**Don't block ACT's parse thread.** Analysis and encounter store writes run on one background thread, and results
+return to the UI thread through ACT's main form.
 
 **Send JSON to the page, never HTML.** Log text includes player names and chat, so the page writes it with
 `textContent`, and a Content Security Policy limits it to bundled files.

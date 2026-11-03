@@ -8,52 +8,89 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
+  <header class="top">
     <h1 id="page-title">AugurACT</h1>
-    <p id="empty">Waiting for an encounter to end.</p>
+    <nav class="tabs host-only" role="tablist" hidden>
+      <button type="button" role="tab" id="tab-encounters" aria-selected="true" aria-controls="encounters-view">Encounters</button>
+      <button type="button" role="tab" id="tab-data" aria-selected="false" aria-controls="data-view">Encounters data</button>
+    </nav>
+    <button type="button" id="refresh" class="host-only" hidden>Refresh list</button>
   </header>
+  <p id="notice" class="notice" role="status" hidden></p>
 
-  <section id="fights-section" hidden>
-    <h2>Fights</h2>
-    <div class="scroll">
-      <table id="fights">
-        <thead>
-          <tr>
-            <th>Fight</th><th>Zone</th><th>When</th><th class="num">Length</th>
-            <th class="num">Barrages</th><th class="num">Blocked</th><th class="num">Missed</th><th class="num">Cancelled</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+  <section id="encounters-view" role="tabpanel" aria-labelledby="tab-encounters">
+    <p id="empty" class="muted">Waiting for ACT's encounter list.</p>
+    <table id="encounters" hidden>
+      <thead>
+        <tr>
+          <th>Encounter</th><th>Zone</th><th>When</th><th class="num">Length</th>
+          <th class="num">Barrages</th><th class="num">Blocked</th><th class="num">Missed</th><th class="num">No release</th>
+          <th class="host-only" hidden><span class="sr-only">Encounters data</span></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </section>
 
-  <section id="detail" hidden>
-    <h2 id="detail-title"></h2>
-    <p id="detail-zone" class="muted"></p>
-    <div id="boss-stats" class="stats"></div>
+  <section id="data-view" role="tabpanel" aria-labelledby="tab-data" hidden>
+    <div class="data-head">
+      <input id="data-filter" type="search" placeholder="Filter by encounter or zone" aria-label="Filter encounters">
+    </div>
+    <p id="data-path" class="muted hint"></p>
+    <p id="data-empty" class="muted">No encounters recorded yet. Use "Update encounters data" on a fight in the Encounters tab.</p>
+    <div id="data-zones"></div>
+  </section>
 
-    <div class="timeline-head">
-      <h3>Timeline</h3>
-      <div class="legend" aria-label="Legend">
-        <span><i class="sw blocked"></i>Blocked</span>
-        <span><i class="sw missed"></i>Missed</span>
-        <span><i class="sw cancelled"></i>Cancelled</span>
-        <span><i class="sw unresolved"></i>No release</span>
-        <span><i class="tick"></i>Bulwark</span>
-        <span><i class="tick late"></i>Bulwark after release</span>
+  <dialog id="update-dialog" aria-labelledby="update-title">
+    <form method="dialog">
+      <h2 id="update-title">Update encounters data</h2>
+      <p id="update-source" class="muted"></p>
+      <p>Choose the main NPC. Choose more than one when bosses are fought together. The others are recorded as adds.</p>
+      <p id="update-status" class="muted" role="status"></p>
+      <ul id="update-npcs" class="choice-list"></ul>
+      <p id="update-preview" class="preview"></p>
+      <div class="dialog-buttons">
+        <button type="submit" value="cancel" formnovalidate>Cancel</button>
+        <button type="submit" value="save" id="update-save" class="primary" disabled>Save</button>
       </div>
-      <button id="reset-zoom" type="button">Reset zoom</button>
-    </div>
-    <p class="muted hint">Bars run from the warning emote to the release. Scroll to zoom, drag to pan, click a bar for its log lines.</p>
-    <div id="timeline"></div>
+    </form>
+  </dialog>
 
-    <div id="cast-detail" hidden>
-      <h3 id="cast-title"></h3>
-      <p id="cast-summary"></p>
-      <ol id="cast-lines" class="lines"></ol>
+  <template id="detail-template">
+    <div class="enc-detail">
+      <div class="enc-main">
+        <div class="timeline-head">
+          <div class="legend" aria-label="Legend">
+            <span><i class="sw blocked"></i>Blocked</span>
+            <span><i class="sw missed"></i>Missed</span>
+            <span><i class="sw cancelled"></i>Cancelled</span>
+            <span><i class="sw unresolved"></i>No release</span>
+            <span><i class="tick"></i>Bulwark</span>
+            <span><i class="tick late"></i>Bulwark after release</span>
+          </div>
+          <button type="button" class="reset-zoom">Reset zoom</button>
+        </div>
+        <p class="muted hint">Bars run from the warning emote to the release. Scroll to zoom, drag to pan, click a bar for its log lines.</p>
+        <p class="detail-message muted" hidden></p>
+        <div class="timeline"></div>
+        <div class="cast-detail" hidden>
+          <h3 class="cast-title"></h3>
+          <p class="cast-summary"></p>
+          <ol class="cast-lines lines"></ol>
+        </div>
+      </div>
+      <!-- A column of folding panels; more mechanics will add their own. -->
+      <aside class="side" aria-label="Encounter details">
+        <section class="side-panel" data-panel="barrages">
+          <h3><button type="button" class="side-toggle" aria-expanded="true">Barrages</button></h3>
+          <div class="side-body">
+            <dl class="counts"></dl>
+            <div class="npc-stats"></div>
+          </div>
+        </section>
+      </aside>
     </div>
-  </section>
+  </template>
 
   <script src="timeline.js"></script>
   <script src="app.js"></script>

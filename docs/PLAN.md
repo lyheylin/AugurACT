@@ -56,8 +56,23 @@ Built end to end ahead of the phases below, to test the approach on a mechanic c
 - [x] Check against 43 logs from three characters: 1,625 casts from 35 bosses.
 - [x] Show casts on a timeline in the plugin tab, and in a page the CLI writes from saved logs.
 - [x] Keep a boss catalog in `data/boss-mechanics.json`, built from logs and safe to commit.
-- [ ] Check in ACT that `EncounterData.LogLines` includes the emote and bulwark lines.
-- [ ] Explain the unresolved warnings, and check the bosses that never produce a barrage damage line.
+- [x] `EncounterData.LogLines` includes the emote and bulwark lines: ACT keeps every game line (user, Nov 3).
+- [x] Unresolved warnings: the boss sometimes doesn't release. Shown as "No release".
+- [x] Bosses with no barrage damage line: a blocked barrage can do no damage at all, so no damage means
+      blocked.
+
+### Plugin: ACT encounters with barrages
+
+- [x] List ACT's own encounters (`ZoneList`), including fights from before the plugin was enabled, and add
+      new ones as they end.
+- [x] Analyze them on one background thread, newest first, so the list fills in barrage counts. A click
+      jumps the queue.
+- [x] Click an encounter to expand its barrage timeline underneath, with a folding "Barrages" panel on the
+      right: barrages, blocked, missed, no release (and cancelled when there are any).
+- [x] "Update encounters data" per fight: the user confirms the main NPC(s), defaulting to the one ACT named
+      the fight after. Zone plus main NPCs is the encounter; the rest are its adds. Stored in ACT's
+      `Config\AugurACT.encounters.json`; shown on the "Encounters data" tab, by zone.
+- [ ] Verify in ACT (see below).
 
 ### Phase 2: Fight segmentation
 
@@ -97,6 +112,9 @@ lines for what ACT doesn't capture, such as NPC emotes and speech.
 
 ## Next steps
 
+Common mechanics come first, each built the same way as barrage (see [Adding a mechanic](ADDING-A-MECHANIC.md)),
+then encounter-specific ones.
+
 1. Identify specific logs and encounters to use as references, with their known mechanics. Barrage and
    bulwark is done; the Oct 12 Peris K'dal fight in Shanown's log is a reference for group misses.
 2. List common patterns seen in those fights that rules can target.
@@ -111,14 +129,16 @@ These can't be checked without running inside ACT:
 - [ ] WebView2 renders in the tab under `ACTx86.exe`, if that is ever used.
 - [x] `EncounterData.LogLines` is populated when `OnCombatEnd` fires. Every encounter in the first test parsed
       all of its lines, up to 837,508 lines in one encounter.
-- [x] Disabling and re-enabling the plugin works without restarting ACT. The list starts empty again, because
-      encounters are only captured as ACT finishes them.
+- [x] Disabling and re-enabling the plugin works without restarting ACT.
+- [ ] The encounter list matches ACT's, without each zone's merged "All" entry, and Refresh picks up imports
+      and ACT's "clear" correctly.
+- [ ] Background analysis of a long raid night keeps ACT responsive.
+- [ ] Barrage counts in the list match the CLI for the same fight.
+- [ ] The main NPC dialog lists the fight's enemies, and no players or pets. Saving writes
+      `%APPDATA%\Advanced Combat Tracker\Config\AugurACT.encounters.json`.
 
 ## Open questions
 
-- **Selecting encounters:** pick from ACT's own encounter list, from the plugin's list, or both. Listing
-  ACT's encounters directly would also cover fights that finished before the plugin was enabled, which the
-  plugin's list misses today. Check what ACT exposes.
 - **Multi-mob fights:** ACT's encounter boundaries may not match a logical boss fight with adds. ACT already
   produces titles like `Illicus, Zon Zobboz Swarmer`, and trash pulls appear as encounters of their own.
 - **Rule storage:** where tuned rules live, and whether they should be shareable.

@@ -4,8 +4,9 @@ An [Advanced Combat Tracker](https://advancedcombattracker.com/) plugin for Ever
 parsed encounters to find key events and boss behavior patterns, shows them on an interactive timeline,
 and produces trigger regexes.
 
-**Status:** early. The first mechanic, barrage and bulwark, is detected end to end, with a timeline in the
-plugin tab and a boss catalog. Other analysis is not built yet. See [the plan](docs/PLAN.md).
+**Status:** early. The first mechanic, barrage and bulwark, is detected end to end. The plugin tab lists
+ACT's encounters with their barrage counts; click one for its barrage timeline. "Update encounters data"
+records a fight under its zone and main NPCs, with its adds and which of them release barrages. Other analysis is not built yet. See [the plan](docs/PLAN.md).
 
 ## Requirements
 
@@ -57,6 +58,7 @@ dependency DLLs.
 - [Architecture](docs/ARCHITECTURE.md): project layout and design constraints
 - [EQ2 log format](docs/EQ2-LOG-FORMAT.md): what real logs contain
 - [Mechanics](docs/MECHANICS.md): boss mechanics AugurACT recognizes, and how
+- [Adding a mechanic](docs/ADDING-A-MECHANIC.md): the steps and pitfalls, learned from barrage
 - [Boss catalog](data/boss-mechanics.json): which bosses have which mechanics
 
 ## Logs and privacy

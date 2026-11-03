@@ -38,13 +38,17 @@ The outcome comes from barrage damage in the 6 seconds after the release, not fr
 
 | Outcome | Raid | Group |
 | --- | --- | --- |
-| Blocked | `Barrage` hits only the named target | no `Barrage:` damage at all |
+| Blocked | `Barrage` hits only the named target, or no one | no `Barrage:` damage at all |
 | Missed | `Barrage` also hits other players | any `Barrage:` damage, even "fails to inflict any damage" |
 | Cancelled | cancel emote | cancel emote |
-| Unresolved | warning, then no release or cancel within 20 s | same |
+| No release | warning, then no release or cancel within 20 s | same |
+
+A blocked barrage sometimes does no damage even to the target, so no damage at all counts as blocked. A boss
+can also warn and then never release; that's a real outcome, shown as "No release", not a detection gap.
 
 **In raids, only the target's group needs a bulwark.** A miss splashes 4 to 5 players, the rest of the
-target's group, with about 10 to 15B focus damage each. A target in a group with no fighter can't be blocked.
+target's group, with about 10 to 15B focus damage each. A target in a group with no fighter can't be blocked;
+that is still recorded as a miss, with the target named.
 
 **Bulwarks are only logged for your own group**, so bulwark presses are kept as supporting evidence only:
 
@@ -56,11 +60,23 @@ target's group, with about 10 to 15B focus damage each. A target in a group with
 Damage on the target alone doesn't separate the outcomes. Bulwarked and unbulwarked hits on the target overlap
 heavily, and the boss's normal flurries look much like a barrage.
 
-### Open questions
+### Settled questions
 
-- **Unresolved barrages:** about 4% of warnings, 14 of them on Thet-ki-dua in Revelations of Consequence, have
-  no release or cancel while the boss keeps fighting. Nothing in the log says why.
-- **Bosses with no damage line:** Gawk, Gaze and Glare Oglth and Temper never produced a `Barrage` hit, even on
-  the target. "Blocked" for them only means no splash was seen. A miss there may look different.
-- **Group composition:** the log doesn't say who is in which raid group. Knowing it would let a miss be split
-  into "no fighter in that group" and "late or forgotten bulwark".
+- **No release:** about 4% of warnings, 14 of them on Thet-ki-dua in Revelations of Consequence, have no
+  release or cancel. The boss doesn't always release, so these are their own outcome.
+- **No damage line:** Gawk, Gaze and Glare Oglth and Temper never produced a `Barrage` hit. A blocked
+  barrage can do no damage, so these count as blocked.
+- **Fighterless groups:** not split out. A miss names its target, which is enough.
+
+## Encounters data in the plugin
+
+Separate from the catalog above, the plugin keeps the user's own record of encounters in
+`%APPDATA%\Advanced Combat Tracker\Config\AugurACT.encounters.json`. It is written only when the user clicks
+"Update encounters data" on an ACT fight and confirms its main NPCs.
+
+- **An encounter is its zone plus its set of main NPCs** (bosses). Several can be chosen for bosses fought
+  together. Recording another fight with the same zone and bosses adds to that encounter.
+- **Every other NPC in the fight is an add**, listed under the encounter.
+- **Each NPC carries its own mechanic flags.** Today that is only `releasesBarrage`: yes once any recorded fight
+  showed that NPC releasing a barrage (blocked or missed). A later fight without a release never turns it back
+  to no, and a cancelled or unreleased warning doesn't count. More mechanics will add their own flags.
