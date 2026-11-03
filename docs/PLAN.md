@@ -46,6 +46,19 @@ Turn raw lines into typed events: damage, heal, ward, kill, cure, interrupt, NPC
       coverage, since most are player flavor text.
 - [ ] Check the rules against other bosses and logs.
 
+### First mechanic: barrage and bulwark (done)
+
+Built end to end ahead of the phases below, to test the approach on a mechanic common to many fights. See
+[Mechanics](MECHANICS.md).
+
+- [x] Detect warning, release and cancel, and the bulwarks pressed for each one.
+- [x] Decide blocked or missed from barrage damage, which works for raids and groups.
+- [x] Check against 43 logs from three characters: 1,625 casts from 35 bosses.
+- [x] Show casts on a timeline in the plugin tab, and in a page the CLI writes from saved logs.
+- [x] Keep a boss catalog in `data/boss-mechanics.json`, built from logs and safe to commit.
+- [ ] Check in ACT that `EncounterData.LogLines` includes the emote and bulwark lines.
+- [ ] Explain the unresolved warnings, and check the bosses that never produce a barrage damage line.
+
 ### Phase 2: Fight segmentation
 
 Identify the boss and split logs into pulls, using NPC instance IDs, zone changes and activity gaps.
@@ -61,6 +74,7 @@ Identify the boss and split logs into pulls, using NPC instance IDs, zone change
 ### Phase 4: Interactive timeline
 
 - Choose a library, with vis-timeline and D3 as the candidates. Bundle it with the plugin; don't use a CDN.
+  The barrage timeline is plain SVG for now, which may be enough.
 - One lane per ability or event type, with zoom, pan, and click-through to source log lines.
 - Send aggregated data to the page. A long raid fight is far too many lines to render individually.
 
@@ -83,7 +97,8 @@ lines for what ACT doesn't capture, such as NPC emotes and speech.
 
 ## Next steps
 
-1. Identify specific logs and encounters to use as references, with their known mechanics.
+1. Identify specific logs and encounters to use as references, with their known mechanics. Barrage and
+   bulwark is done; the Oct 12 Peris K'dal fight in Shanown's log is a reference for group misses.
 2. List common patterns seen in those fights that rules can target.
 
 ## Verify in ACT

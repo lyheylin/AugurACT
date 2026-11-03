@@ -6,8 +6,9 @@
 src/AugurACT.Core      netstandard2.0   Log parsing and analysis. No ACT or UI references.
 src/AugurACT.Plugin    net48            ACT entry point. Builds AugurACT.dll. Must stay minimal (see below).
 src/AugurACT.Ui        net48            WebView2 host control.
-src/AugurACT.Ui/web                     The page shown in the plugin tab.
+src/AugurACT.Ui/web                     The page shown in the plugin tab. The CLI inlines it into a standalone page.
 src/AugurACT.Cli       net10.0          Runs Core over saved log files to tune rules. Runs on Linux/WSL.
+data/boss-mechanics.json                Boss catalog built by the CLI. Holds no player names.
 tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
 ```
 

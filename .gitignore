@@ -12,3 +12,6 @@ Directory.Build.local.props
 # Real logs contain other players' names and private chat; use synthetic fixtures
 *.log
 eq2log_*.txt
+
+# Timeline pages written by the CLI include player names
+*timeline*.html

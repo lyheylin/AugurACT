@@ -3,18 +3,59 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AugurACT</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>AugurACT</h1>
-  <p id="empty">Waiting for an encounter to end.</p>
-  <table id="encounters" hidden>
-    <thead>
-      <tr><th>Encounter</th><th>Zone</th><th>Duration</th><th>Lines parsed</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <header>
+    <h1 id="page-title">AugurACT</h1>
+    <p id="empty">Waiting for an encounter to end.</p>
+  </header>
+
+  <section id="fights-section" hidden>
+    <h2>Fights</h2>
+    <div class="scroll">
+      <table id="fights">
+        <thead>
+          <tr>
+            <th>Fight</th><th>Zone</th><th>When</th><th class="num">Length</th>
+            <th class="num">Barrages</th><th class="num">Blocked</th><th class="num">Missed</th><th class="num">Cancelled</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="detail" hidden>
+    <h2 id="detail-title"></h2>
+    <p id="detail-zone" class="muted"></p>
+    <div id="boss-stats" class="stats"></div>
+
+    <div class="timeline-head">
+      <h3>Timeline</h3>
+      <div class="legend" aria-label="Legend">
+        <span><i class="sw blocked"></i>Blocked</span>
+        <span><i class="sw missed"></i>Missed</span>
+        <span><i class="sw cancelled"></i>Cancelled</span>
+        <span><i class="sw unresolved"></i>No release</span>
+        <span><i class="tick"></i>Bulwark</span>
+        <span><i class="tick late"></i>Bulwark after release</span>
+      </div>
+      <button id="reset-zoom" type="button">Reset zoom</button>
+    </div>
+    <p class="muted hint">Bars run from the warning emote to the release. Scroll to zoom, drag to pan, click a bar for its log lines.</p>
+    <div id="timeline"></div>
+
+    <div id="cast-detail" hidden>
+      <h3 id="cast-title"></h3>
+      <p id="cast-summary"></p>
+      <ol id="cast-lines" class="lines"></ol>
+    </div>
+  </section>
+
+  <script src="timeline.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

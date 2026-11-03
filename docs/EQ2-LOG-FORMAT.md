@@ -65,6 +65,10 @@ only 423 linked lines, among millions of others.
 130 "readies" lines and 121 "releases" lines. Of the 121 pairs, 120 had a gap of 10-11 seconds and one had
 9 seconds. The target's name is **upper-cased** in this emote, which matters for trigger regexes.
 
+This is the barrage and bulwark mechanic, which [Mechanics](MECHANICS.md) covers across 35 bosses.
+
+Some emotes carry a colour code instead of an NPC link: `\#FF00FFBoss prepares to unleash a barrage of attacks!`.
+
 ### Other emotes and speech
 
 ```

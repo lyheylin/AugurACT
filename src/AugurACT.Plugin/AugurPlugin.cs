@@ -60,13 +60,14 @@ namespace AugurACT.Plugin
             var title = encounter.Title;
             var zone = encounter.ZoneName;
             var lines = encounter.LogLines.Select(entry => entry.LogLine).ToList();
+            var self = ActGlobals.charName;
 
             // Raid encounters can hold hundreds of thousands of lines; keep ACT's parse thread free.
             Task.Run(() =>
             {
                 try
                 {
-                    var json = EncounterSummary.Build(title, zone, lines).ToJson();
+                    var json = EncounterSummary.Build(title, zone, lines, self).ToJson();
                     ActGlobals.oFormActMain.BeginInvoke(new Action(() => target.PostMessage(json)));
                 }
                 catch (Exception ex)

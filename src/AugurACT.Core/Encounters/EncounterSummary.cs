@@ -4,6 +4,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using AugurACT.Core.Eq2;
+using AugurACT.Core.Mechanics;
 
 namespace AugurACT.Core.Encounters
 {
@@ -31,9 +32,13 @@ namespace AugurACT.Core.Encounters
         [DataMember(Name = "endEpoch", Order = 6)]
         public long? EndEpoch { get; private set; }
 
-        public static EncounterSummary Build(string title, string zone, IEnumerable<string> lines)
+        [DataMember(Name = "barrages", Order = 7)]
+        public List<BarrageCast> Barrages { get; private set; } = new List<BarrageCast>();
+
+        public static EncounterSummary Build(string title, string zone, IEnumerable<string> lines, string? selfName = null)
         {
             var summary = new EncounterSummary { Title = title, Zone = zone };
+            var barrages = new BarrageDetector(selfName, zone);
 
             foreach (var line in lines)
             {
@@ -44,6 +49,7 @@ namespace AugurACT.Core.Encounters
                 }
 
                 summary.ParsedLines++;
+                barrages.Feed(parsed!);
                 var epoch = parsed!.EpochSeconds;
                 if (summary.StartEpoch == null || epoch < summary.StartEpoch)
                 {
@@ -56,6 +62,7 @@ namespace AugurACT.Core.Encounters
                 }
             }
 
+            summary.Barrages.AddRange(barrages.Complete());
             return summary;
         }
 
