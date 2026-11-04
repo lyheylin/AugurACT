@@ -1,0 +1,46 @@
+/* Barrage and bulwark: list column, swatches, timeline bars and ticks, panel cards, log line colours. Colours are defined here, next to the marks that use them. */
+:root {
+  --blocked: #2f8a4c;
+  --missed: #c8372d;
+  --cancelled: #8a929b;
+  --unresolved: #c98a12;
+  --bulwark: #3d6fb6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --blocked: #4cb06c;
+    --missed: #e5594e;
+    --cancelled: #7d868f;
+    --unresolved: #e0a63a;
+    --bulwark: #6f9ee0;
+  }
+}
+
+.sw.blocked { background: var(--blocked); }
+.sw.missed { background: var(--missed); }
+.sw.cancelled { background: var(--cancelled); }
+.sw.unresolved { border: 1.5px dashed var(--unresolved); }
+.tick { display: inline-block; width: 2px; height: 10px; background: var(--bulwark); }
+.tick.late { background: var(--missed); }
+.timeline .cast { cursor: pointer; }
+.timeline .cast.blocked { fill: var(--blocked); }
+.timeline .cast.missed { fill: var(--missed); }
+.timeline .cast.cancelled { fill: var(--cancelled); }
+.timeline .cast.unresolved { fill: transparent; stroke: var(--unresolved); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.timeline .cast.selected { stroke: var(--fg); stroke-width: 2; stroke-dasharray: none; }
+.timeline .release { fill: var(--fg); }
+.timeline .bulwark { stroke: var(--bulwark); stroke-width: 2; }
+.timeline .bulwark.late { stroke: var(--missed); }
+.lines li.kind-release { color: var(--accent); font-weight: 600; }
+.lines li.kind-hit { color: var(--missed); }
+.lines li.kind-hit.on-target { color: var(--muted); }
+.lines li.kind-bulwark { color: var(--bulwark); }
+td.missed-count:not(:empty) { color: var(--missed); font-weight: 600; }
+.npc-stats { display: grid; gap: 6px; }
+.stat { background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; }
+.stat h4 { margin: 0 0 2px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat .rate { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat dl { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; margin: 2px 0 0; font-size: 12px; }
+.stat dt { color: var(--muted); }
+.stat dd { margin: 0; font-variant-numeric: tabular-nums; }

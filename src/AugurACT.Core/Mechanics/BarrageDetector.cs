@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using AugurACT.Core.Encounters;
 using AugurACT.Core.Eq2;
 
 namespace AugurACT.Core.Mechanics
@@ -18,7 +19,7 @@ namespace AugurACT.Core.Mechanics
     // In raids the barrage always hits its target, and a miss splashes the target's group. In groups a
     // blocked barrage produces no damage lines at all. Either way, damage on anyone but the target means
     // the target's group had no bulwark up. See docs/MECHANICS.md.
-    public sealed class BarrageDetector
+    public sealed class BarrageDetector : IMechanicDetector
     {
         public const int HitWindowSeconds = 6;
         public const int MaxLeadSeconds = 20;
@@ -91,6 +92,15 @@ namespace AugurACT.Core.Mechanics
                     zone = match.Groups["zone"].Value;
                 }
             }
+        }
+
+        bool IMechanicDetector.MightMatter(string rawLine) => MightMatter(rawLine);
+
+        int IMechanicDetector.Complete(EncounterSummary summary)
+        {
+            var casts = Complete();
+            summary.Barrages.AddRange(casts);
+            return casts.Count;
         }
 
         public IReadOnlyList<BarrageCast> Complete()

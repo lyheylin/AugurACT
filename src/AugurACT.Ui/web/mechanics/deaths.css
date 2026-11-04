@@ -1,0 +1,20 @@
+/* Player deaths: swatch, timeline ×, panel list, log line colour. Colours are defined here, next to the marks that use them. */
+:root {
+  --death: #7b3fb0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --death: #b58be6;
+  }
+}
+
+.death-mark { display: inline-block; width: 10px; height: 10px; flex: none; position: relative; }
+.death-mark::before, .death-mark::after { content: ""; position: absolute; left: 4px; top: -1px; width: 2px; height: 12px; background: var(--death); transform: rotate(45deg); }
+.death-mark::after { transform: rotate(-45deg); }
+.timeline .death { cursor: pointer; }
+.timeline .death .hit { fill: transparent; }
+.timeline .death .mark { stroke: var(--death); stroke-width: 2; stroke-linecap: round; fill: none; }
+.timeline .death.selected .hit { fill: none; stroke: var(--fg); stroke-width: 1.5; }
+.lines li.kind-death { color: var(--death); }
+.death-counts dt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }

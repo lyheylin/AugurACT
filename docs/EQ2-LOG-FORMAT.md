@@ -41,7 +41,8 @@ The ACT parser's regexes (`ACT_English_Parser.cs`, around line 335) are the refe
 | Hate | `Player's Ability reduces THEIR hate with Boss for a critical of 7,438,675,968 threat.` |
 | Cure | `Player's Ability relieves Debuff IV from Player.` |
 | Power drain | `Boss's Ability crushes Player draining 123 points of power.` |
-| Kill | `Boss has killed Player.` |
+| Kill | `Boss has killed Player.` (also `has killed you.`) |
+| Death, no killer | `Alas, Player has died from pain and suffering.` |
 | Interrupt | `Player was interrupted!` |
 | Casting | `Player begins to gather strands of arcane energy.` |
 | Zone | `You have entered Zone Name.` |

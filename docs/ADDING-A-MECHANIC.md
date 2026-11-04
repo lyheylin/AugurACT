@@ -11,7 +11,8 @@ it per NPC". Barrage and bulwark was the first one done this way; each step name
   bulwark only covers the caster's group. Record these in [Mechanics](MECHANICS.md) and in memory.
 - **Prefilter the archive first.** The logs are tens of GB. Grep each file down to the lines the mechanic
   could involve, keeping the `eq2log_<Character>` file names (the CLI reads the logger's name from them), and
-  run everything else on the filtered copies. The full barrage run took 97 s on 12 GB; filtered it took 0.3 s.
+  run everything else on the filtered copies. Anything that needs the player list (`deaths`, `timeline`) must
+  run on full logs, because the roster reads every line for ability use. The full barrage run took 97 s on 12 GB; filtered it took 0.3 s.
   Keep the zone line (`] You have entered `) in the filter.
 - **Write down the line sequence** for each content type, with exact text: warning emote, coloured text,
   player response, release, damage, cancel. Raid and group versions usually differ.
@@ -31,45 +32,76 @@ it per NPC". Barrage and bulwark was the first one done this way; each step name
 
 ## 3. Detector in Core
 
-Copy `src/AugurACT.Core/Mechanics/BarrageDetector.cs` and `BarrageCast.cs`:
+Copy `src/AugurACT.Core/Mechanics/BarrageDetector.cs` and `BarrageCast.cs`. A detector implements
+`IMechanicDetector`:
 
-- A static `MightMatter(rawLine)` cheap substring check. `EncounterSummary.Build` only fully parses lines that
-  pass it, and the CLI prefilter uses it too.
-- `Feed(Eq2LogLine)` per line in time order, `Complete()` at the end. Expire open casts by time windows
-  (lead time, hit window, late-response window) rather than waiting for the end.
+- `MightMatter(rawLine)`: a cheap substring check. Only lines that pass it are parsed and fed, in the plugin
+  and in the CLI's prefilter.
+- `Feed(Eq2LogLine)` per line in time order. Expire open casts by time windows (lead time, hit window,
+  late-response window) rather than waiting for the end.
+- `Complete(EncounterSummary)`: add the results to the summary's list and return how many there were.
+- The constructor takes a `ScanContext`: the logger's name, the zone, and the shared `PlayerRoster`, which says
+  who the players are (ACT's ally list in the plugin, log evidence in the CLI). Don't work that out again.
+
+Then register it, in two places in Core and nowhere else:
+
+1. Add it to `MechanicSet.Create` (`src/AugurACT.Core/Mechanics/MechanicSet.cs`).
+2. Add a `[DataMember]` list for its results to `EncounterSummary`, so they travel in the `analysis` message
+   and the CLI page.
+
+The plugin and the CLI `timeline` command then run it with no changes.
+
+Rules that held for barrage:
+
 - Match the boss by its **exact NPC name prefix**. Names hold apostrophes and commas
   (`Mo'iana the Ravenous' Barrage`, `Evuntressa, Kryterion's Behest`), which the generic parser splits wrongly.
-- Targets in emotes are upper case: compare without case. `YOU` is the logger; the logger's name comes from
-  ACT (`charName` or the encounter's `CharName`) or the log file name.
-- Keep the source lines on each cast (stripped of markup), so the page can show why a verdict was made.
+- Targets in emotes are upper case: compare without case. `YOU` is the logger.
+- Keep the source lines on each result (stripped of markup), so the page can show why a verdict was made.
 - Add a `ContentKind` aware variant if raid and group differ.
 
 ## 4. Tests
 
 Synthetic fixtures only; real logs hold other players' names and chat. Cover each outcome for each content
 type, the logger as the target, missing warning lines, player abilities with similar names, and catalog
-de-duplication. See `tests/AugurACT.Core.Tests/BarrageDetectorTests.cs`.
+de-duplication. See `tests/AugurACT.Core.Tests/BarrageDetectorTests.cs`. Feed through `EncounterSummary.Build`
+when the detector needs the roster (see `DeathDetectorTests.cs`).
 
-## 5. CLI and the boss catalog
+## 5. CLI
 
-Add a CLI subcommand like `barrage` (`src/AugurACT.Cli/Commands/BarrageCommand.cs`): per-boss table, `--catalog`
-to add to `data/boss-mechanics.json` (no player names, safe to commit; casts de-duplicated by time so two
-characters' logs of one fight count once), and `--html` for a standalone timeline page. That page holds player
-names: never commit or share it (`.gitignore` covers `*timeline*.html`).
+- `timeline <logs> --html page.html` writes the plugin's page as a standalone file, with every fight that has
+  a mechanic in it. It runs all registered mechanics, so a new one needs nothing here. The page holds player
+  names: never commit or share it (`.gitignore` covers `*timeline*.html`).
+- For tuning, add a subcommand of your own like `barrage` or `deaths` (`src/AugurACT.Cli/Commands/`) that prints
+  what the rule found across many logs. `barrage --catalog` adds to `data/boss-mechanics.json` (no player
+  names, safe to commit; casts de-duplicated by time so two characters' logs of one fight count once).
 
 ## 6. Plugin page
 
-- Add the casts to `EncounterSummary` so they travel in the `analysis` message.
-- Encounter list: count columns for the outcomes that matter.
-- Timeline (`web/timeline.js`): a lane per NPC, colour per outcome, ticks for player responses.
-- Right-hand column: one folding `.side-panel` per mechanic (`data-panel="<name>"`), same width open or
-  closed. Panels stack and the column scrolls; don't make a mechanic its own layout.
-- Write log text with `textContent` only.
+Everything for one mechanic lives in two files, `web/mechanics/<name>.js` and `web/mechanics/<name>.css`, plus a
+`<script>` and a `<link>` line for them in `web/index.html`. Copy `mechanics/barrage.js`. It calls
+`AugurTimeline.register({...})` with:
+
+| Field | What it's for |
+| --- | --- |
+| `key`, `label`, `swatch` | Its one switch in the filter under the timeline, which turns all its marks on and off. |
+| `legend` | Entries for the legend below the filter: `{ swatch, label }`. |
+| `columns` | Count columns in the encounter list: `{ header, value(summary), className }`. |
+| `items(summary)` | Its results, for `#select=<key>:<n>` links. |
+| `times(summary)` | Epochs that widen the timeline when they fall outside ACT's start and end. |
+| `npcLanes(summary)`, `playerLanes(summary)` | Lanes it needs. Player lanes always include everyone in `summary.players`. |
+| `draw(summary, api)` | Its marks. `api` gives `x(epoch)`, `npcLane(name)`, `playerLane(name)`, `el()`, `clock()`, `isSelected()` and `selectable(node, item)`. |
+| `panel: { title, render(body, summary) }` | Its folding panel on the right. `summary` is null while analysis runs. |
+| `showDetail(view, item, fight)` | The box under the timeline when a mark is clicked: fill `view.title`, `view.summary`, `view.lines` (`AugurUtil.fillLines`). |
+| `dataFlag` | Optional yes/no column on the Encounters data tab: `{ header, field, describe(name) }`. |
+
+Lanes never change with the filter: NPC and player lanes stay when marks are switched off. Write log text with
+`textContent` only (`AugurUtil.make` does). Keep a mechanic's colours as variables in its own CSS file.
 
 ## 7. Encounters data
 
-Add a flag to `NpcRecord` in `src/AugurACT.Core/Mechanics/EncounterStore.cs` and set it in `Update` from the
-casts. Flags only turn on, never off. Add a column for it to the encounter and boss/add tables on the
+Only if the mechanic is a per-NPC trait worth remembering: add a flag to `NpcRecord` in
+`src/AugurACT.Core/Mechanics/EncounterStore.cs` and set it in `Update` from the casts, and give the mechanic a
+`dataFlag` in its JS file. Flags only turn on, never off. Add a column for it to the encounter and boss/add tables on the
 Encounters data tab. Don't put mechanic counts in the "updated" message; the store is mechanic-neutral.
 
 ## 8. ACT pitfalls already hit

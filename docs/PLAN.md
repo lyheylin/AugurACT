@@ -72,6 +72,12 @@ Built end to end ahead of the phases below, to test the approach on a mechanic c
 - [x] "Update encounters data" per fight: the user confirms the main NPC(s), defaulting to the one ACT named
       the fight after. Zone plus main NPCs is the encounter; the rest are its adds. Stored in ACT's
       `Config\AugurACT.encounters.json`; shown on the "Encounters data" tab, by zone.
+- [x] Player deaths: a Deaths column, a lane per player who died on the timeline, and a "Deaths" panel with
+      counts per character.
+- [x] A filter under the timeline with one switch per mechanic (Barrage, Death), and a legend below it.
+- [x] A lane for every player in the encounter, from ACT's ally list, whether or not anything happened to them.
+- [x] Mechanics are self-contained: a Core detector registered in `MechanicSet`, and a JS and CSS file in
+      `web/mechanics/` (see Adding a mechanic).
 - [ ] Verify in ACT (see below).
 
 ### Phase 2: Fight segmentation
@@ -134,6 +140,9 @@ These can't be checked without running inside ACT:
       and ACT's "clear" correctly.
 - [ ] Background analysis of a long raid night keeps ACT responsive.
 - [ ] Barrage counts in the list match the CLI for the same fight.
+- [ ] Death counts match ACT's Deaths column, apart from "pain and suffering" deaths, which ACT leaves out.
+- [ ] ACT's ally list holds every player in the fight (it gives the player lanes and decides whose deaths
+      count), and no NPCs.
 - [ ] The main NPC dialog lists the fight's enemies, and no players or pets. Saving writes
       `%APPDATA%\Advanced Combat Tracker\Config\AugurACT.encounters.json`.
 

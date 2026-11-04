@@ -68,6 +68,45 @@ heavily, and the boss's normal flurries look much like a barrage.
   barrage can do no damage, so these count as blocked.
 - **Fighterless groups:** not split out. A miss names its target, which is enough.
 
+## Player deaths
+
+Every encounter counts each player's deaths, as ACT's Deaths column does, and marks them on the timeline.
+Detection is in `src/AugurACT.Core/Mechanics/DeathDetector.cs`. Findings come from 15 logs in October and early
+November 2026 (2,837 deaths).
+
+| Line | Meaning |
+| --- | --- |
+| `Boss has killed Player.` | What ACT counts. NPCs, pets and adds dying use the same line. |
+| `Boss has killed you.` | The logger died. Counted under the logger's name. |
+| `Alas, Player has died from pain and suffering.` | A death with no killer named. ACT doesn't count these. |
+
+- **Both lines usually come for one death**, in the same second. Lines for the same player within 5 seconds are
+  one death; dying again after a rez takes longer.
+- **"Pain and suffering" is sometimes the only line.** Instant-kill mechanics killed players through 19T of ward
+  with only this line. So our count can be higher than ACT's; the Deaths panel says by how many.
+- **Pets die from pain and suffering too** (`Alas, Player's thug ...`). Names with `'s ` are never players.
+- **Some bosses have one-word names that look like players'**: Senzu, Mozal, Nazkun and Qworux kill players and
+  get killed by them. Player names are one capitalised word, but that alone isn't enough.
+- **Who is a player** comes from `PlayerRoster`, shared by all mechanics. In the plugin, ACT's ally list for the
+  encounter decides (plus the logger). Without it (the CLI), a one-word name is a player when it was linked in
+  group or raid chat (General and auction chat come from anyone in the zone), was in a heal between two
+  different characters, or was killed by something that can't be a player (several words, lower case, or an
+  NPC link). A one-word name killed by a known player is a named mob. "Pain and suffering" also kills NPC
+  adds with one-word names, so it only counts for a known player.
+- **Charmed players speak as NPCs**: `\aNPC 277422 Player:Player\/a says, "Your blood calls to me."` So an
+  NPC link only rules a name out when nothing shows it's a player.
+- **Named pets and mercenaries aren't players.** Summoner pets and mercenaries get random one-word names
+  (Gantik, Gonober, Kabeker, Voser, Zaranab), take heals and wards, melee (`Gantik hits ...`) and die. They never
+  use a named ability, while every player does, thousands of times a fight. So a player must also have a line
+  like `Player's Ability hits ...` (or `Players' Ability` for names ending in s) in the encounter, with ACT's
+  ally list too. On Oct 10 that left exactly 24 in every raid boss fight and 6 in every group fight.
+- **A player who never used an ability isn't listed**, and their deaths aren't counted. That would take dying
+  at the pull before casting anything.
+
+Check the rule against saved logs with `AugurACT.Cli deaths <logs>`, which lists deaths per character with
+their most common killers. It needs the full logs, not a prefiltered copy, because ability lines decide who's
+a player.
+
 ## Encounters data in the plugin
 
 Separate from the catalog above, the plugin keeps the user's own record of encounters in

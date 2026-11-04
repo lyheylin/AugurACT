@@ -186,7 +186,7 @@ namespace AugurACT.Plugin
         {
             var lines = CopyLines(encounter);
             var self = string.IsNullOrEmpty(encounter.CharName) ? ActGlobals.charName : encounter.CharName;
-            var summary = EncounterSummary.Build(encounter.Title, encounter.ZoneName, lines, self);
+            var summary = EncounterSummary.Build(encounter.Title, encounter.ZoneName, lines, self, Allies(encounter));
             lock (gate)
             {
                 summaries[id] = summary;
@@ -313,6 +313,20 @@ namespace AugurACT.Plugin
             }
 
             return store;
+        }
+
+        // ACT's allies decide whose deaths count. ACT changes the list on its parse thread, so a failed read
+        // falls back to working it out from the log.
+        private static List<string>? Allies(EncounterData encounter)
+        {
+            try
+            {
+                return encounter.GetAllies().Select(c => c.Name).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is NullReferenceException)
+            {
+                return null;
+            }
         }
 
         // Combatants ACT doesn't count as allies, that took part in the fight.

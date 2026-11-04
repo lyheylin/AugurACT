@@ -33,14 +33,21 @@ dotnet run --project src/AugurACT.Cli -- summary "/path/to/eq2log_Character.txt"
 This prints counts per event type, NPCs with speech or emotes, and the most common unrecognized lines.
 
 ```sh
-dotnet run --project src/AugurACT.Cli -- barrage "/path/to/logs/" --since 2026-09-03 \
-    --catalog data/boss-mechanics.json --html barrage-timeline.html
+dotnet run --project src/AugurACT.Cli -- timeline "/path/to/logs/" --since 2026-10-01 --html encounter-timeline.html
 ```
 
-This finds every barrage in the logs and prints, per boss, how many were blocked, missed or cancelled, the
-warning time and how often it comes. `--catalog` adds new casts to the boss catalog, skipping any already
-recorded. `--html` writes a timeline page that opens from disk. The page contains player names, so keep it
-out of the repository.
+This cuts the logs into fights the way ACT does and writes the plugin's page as a file that opens from disk,
+with every fight that had a mechanic in it. The page contains player names, so keep it out of the repository.
+
+```sh
+dotnet run --project src/AugurACT.Cli -- barrage "/path/to/logs/" --since 2026-09-03 --catalog data/boss-mechanics.json
+dotnet run --project src/AugurACT.Cli -- deaths "/path/to/logs/" --since 2026-10-01
+```
+
+These check one mechanic's rules across many logs. `barrage` prints, per boss, how many barrages were blocked,
+missed or cancelled, the warning time and how often it comes; `--catalog` adds new casts to the boss catalog,
+skipping any already recorded. `deaths` lists player deaths per log and per character, with their most common
+killers.
 
 ## Install in ACT
 

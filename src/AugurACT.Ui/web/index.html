@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AugurACT</title>
   <link rel="stylesheet" href="style.css">
+  <!-- One stylesheet and one script per mechanic, in web/mechanics/. -->
+  <link rel="stylesheet" href="mechanics/barrage.css">
+  <link rel="stylesheet" href="mechanics/deaths.css">
 </head>
 <body>
   <header class="top">
@@ -24,7 +27,7 @@
       <thead>
         <tr>
           <th>Encounter</th><th>Zone</th><th>When</th><th class="num">Length</th>
-          <th class="num">Barrages</th><th class="num">Blocked</th><th class="num">Missed</th><th class="num">No release</th>
+          <!-- Each mechanic's count columns are added here. -->
           <th class="host-only" hidden><span class="sr-only">Encounters data</span></th>
         </tr>
       </thead>
@@ -60,39 +63,30 @@
     <div class="enc-detail">
       <div class="enc-main">
         <div class="timeline-head">
-          <div class="legend" aria-label="Legend">
-            <span><i class="sw blocked"></i>Blocked</span>
-            <span><i class="sw missed"></i>Missed</span>
-            <span><i class="sw cancelled"></i>Cancelled</span>
-            <span><i class="sw unresolved"></i>No release</span>
-            <span><i class="tick"></i>Bulwark</span>
-            <span><i class="tick late"></i>Bulwark after release</span>
-          </div>
+          <p class="muted hint">Scroll to zoom, drag to pan, click a mark for its log lines.</p>
           <button type="button" class="reset-zoom">Reset zoom</button>
         </div>
-        <p class="muted hint">Bars run from the warning emote to the release. Scroll to zoom, drag to pan, click a bar for its log lines.</p>
         <p class="detail-message muted" hidden></p>
         <div class="timeline"></div>
+        <fieldset class="marker-filter" hidden>
+          <legend class="sr-only">Show on the timeline</legend>
+        </fieldset>
+        <div class="legend" aria-label="Legend" hidden></div>
         <div class="cast-detail" hidden>
           <h3 class="cast-title"></h3>
           <p class="cast-summary"></p>
           <ol class="cast-lines lines"></ol>
         </div>
       </div>
-      <!-- A column of folding panels; more mechanics will add their own. -->
-      <aside class="side" aria-label="Encounter details">
-        <section class="side-panel" data-panel="barrages">
-          <h3><button type="button" class="side-toggle" aria-expanded="true">Barrages</button></h3>
-          <div class="side-body">
-            <dl class="counts"></dl>
-            <div class="npc-stats"></div>
-          </div>
-        </section>
-      </aside>
+      <!-- A column of folding panels, one per mechanic. -->
+      <aside class="side" aria-label="Encounter details"></aside>
     </div>
   </template>
 
+  <script src="util.js"></script>
   <script src="timeline.js"></script>
+  <script src="mechanics/barrage.js"></script>
+  <script src="mechanics/deaths.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

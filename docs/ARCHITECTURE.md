@@ -7,6 +7,7 @@ src/AugurACT.Core      netstandard2.0   Log parsing and analysis. No ACT or UI r
 src/AugurACT.Plugin    net48            ACT entry point. Builds AugurACT.dll. Must stay minimal (see below).
 src/AugurACT.Ui        net48            WebView2 host control.
 src/AugurACT.Ui/web                     The page shown in the plugin tab. The CLI inlines it into a standalone page.
+src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel and legend.
 src/AugurACT.Cli       net10.0          Runs Core over saved log files to tune rules. Runs on Linux/WSL.
 data/boss-mechanics.json                Boss catalog built by the CLI. Holds no player names.
 tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
@@ -26,7 +27,7 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 | From page | Plugin answers with |
 | --- | --- |
 | `ready`, `list` | `encounters` (the whole list, newest first) and `encounter-data` |
-| `analyze` (id) | `analysis` (the encounter's summary with its barrages) |
+| `analyze` (id) | `analysis` (the encounter's summary with its barrages and player deaths) |
 | `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
 
@@ -37,6 +38,19 @@ built from the zone and encounter start times and ACT's `EncId`, and looked up a
 **ACT keeps adding lines after `OnCombatEnd`**, most of all during an import. Enumerating `LogLines` then
 throws "Collection was modified", so the plugin copies lines by index, and treats a cached summary as stale
 when the encounter's line count has changed since.
+
+## Mechanics
+
+Each mechanic is a detector in Core and a pair of files in the page, joined by one list on the summary:
+
+```
+Core   IMechanicDetector (BarrageDetector, DeathDetector)  <- MechanicSet.Create, with a ScanContext and PlayerRoster
+       EncounterSummary.Build runs them all over an encounter's lines -> summary.barrages, summary.deaths, summary.players
+Plugin EncounterBridge sends the summary as "analysis"; CLI "timeline" cuts logs into fights (FightSplitter) and embeds it
+Page   web/timeline.js draws lanes and the axis; web/mechanics/*.js register columns, marks, panels and legend
+```
+
+Adding one is described in [Adding a mechanic](ADDING-A-MECHANIC.md).
 
 ## Design rules
 

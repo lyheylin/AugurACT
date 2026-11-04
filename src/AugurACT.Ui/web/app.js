@@ -1,15 +1,22 @@
 'use strict';
 
-// Encounters come from the plugin (ACT's encounter list, analyzed on request) or, in the page the CLI writes,
-// from an inline "barrage-report". Both end up as the same encounter objects here.
+// The page: the encounter list, its expanded detail (timeline, filter, legend, side panels), the update
+// dialog and the encounters data tab. Nothing here is about one mechanic: columns, panels, marks, legend
+// entries and detail text all come from the mechanics registered in web/mechanics/ (AugurTimeline.mechanics).
+//
+// Encounters come from the plugin (ACT's encounter list, each analyzed on request into an EncounterSummary)
+// or, in the page the CLI writes, from an inline "timeline-report" whose fights carry the same summary.
 //
 // Log text holds player names and chat, so everything from it is written with textContent.
 
+const { make, damage, plural } = window.AugurUtil;
+const mechanics = window.AugurTimeline.mechanics;
 const host = window.chrome?.webview;
 const encounters = new Map(); // id -> encounter
 const rows = document.querySelector('#encounters tbody');
-let expanded = null; // { encounter, row, detailRow, timeline }
+let expanded = null; // { encounter, row, detailRow, detail, timeline }
 const panelOpen = new Map(); // panel name -> open; kept while switching encounters
+const markerShown = new Map(); // mechanic key -> marks shown; kept while switching encounters
 let encounterData = null;
 let pendingUpdate = null; // encounter the update dialog is open for
 
@@ -22,59 +29,8 @@ function when(epoch) {
   return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
 }
 
-function time(epoch) {
-  return new Date(epoch * 1000).toLocaleTimeString(undefined, { hour12: false });
-}
-
 function duration(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
-
-function damage(value) {
-  for (const [scale, suffix] of [[1e15, 'Q'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']]) {
-    if (value >= scale) return `${(value / scale).toFixed(1)}${suffix}`;
-  }
-  return String(Math.round(value));
-}
-
-function fmtSeconds(value) {
-  return value == null ? '-' : `${Math.round(value * 10) / 10} s`;
-}
-
-function median(values) {
-  const sorted = values.filter((v) => v != null).sort((a, b) => a - b);
-  if (!sorted.length) return null;
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-// Seconds between casts of one NPC instance; longer gaps are separate pulls.
-function intervals(casts) {
-  const byId = new Map();
-  for (const c of casts) {
-    if (!byId.has(c.npcId)) byId.set(c.npcId, []);
-    byId.get(c.npcId).push(c.readiedAt);
-  }
-  const out = [];
-  for (const times of byId.values()) {
-    times.sort((a, b) => a - b);
-    for (let i = 1; i < times.length; i++) {
-      const gap = times[i] - times[i - 1];
-      if (gap <= 300) out.push(gap);
-    }
-  }
-  return out;
-}
-
-function count(casts, outcome) {
-  return casts.filter((c) => c.outcome === outcome).length;
-}
-
-function make(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
 }
 
 function notice(text, isError) {
@@ -90,18 +46,32 @@ function send(message) {
 
 // ---- encounter list ----
 
-const COLUMNS = 9;
+const FIXED_COLUMNS = 4; // encounter, zone, when, length
+const columns = mechanics.flatMap((m) => m.columns || []);
+const COLUMNS = FIXED_COLUMNS + columns.length + 1; // and the host-only action
 
-// Timeline origin and end: ACT's start and end, widened to any barrage warned before or released after them.
+// The mechanics' count columns go between the fixed ones and the action button.
+function buildHeader() {
+  const action = document.querySelector('#encounters thead th.host-only');
+  for (const column of columns) action.before(make('th', 'num', column.header));
+}
+
+// Timeline origin and end: ACT's start and end, widened to any mechanic event before or after them.
 function span(encounter) {
-  const casts = encounter.barrages || [];
-  let start = encounter.start || encounter.summaryStart || 0;
-  let end = encounter.end || encounter.summaryEnd || start;
-  for (const c of casts) {
-    if (!start || c.readiedAt < start) start = c.readiedAt;
-    end = Math.max(end, c.resolvedAt ?? c.readiedAt);
+  let start = encounter.start || encounter.summary?.startEpoch || 0;
+  let end = encounter.end || encounter.summary?.endEpoch || start;
+  if (encounter.summary) {
+    for (const t of mechanics.flatMap((m) => (m.times ? m.times(encounter.summary) : []))) {
+      if (!start || t < start) start = t;
+      end = Math.max(end, t);
+    }
   }
   return { start, end };
+}
+
+function fightOf(encounter) {
+  const { start, end } = span(encounter);
+  return { title: encounter.title, start, end, summary: encounter.summary };
 }
 
 function upsert(info, prepend) {
@@ -112,7 +82,7 @@ function upsert(info, prepend) {
     return existing;
   }
 
-  const encounter = { ...info, barrages: info.barrages ?? null, state: info.barrages ? 'done' : 'pending' };
+  const encounter = { ...info, summary: null, state: 'pending' };
   encounters.set(encounter.id, encounter);
 
   const row = document.createElement('tr');
@@ -121,10 +91,10 @@ function upsert(info, prepend) {
   row.setAttribute('aria-expanded', 'false');
   for (let i = 0; i < COLUMNS; i++) row.appendChild(document.createElement('td'));
   row.cells[3].className = 'num';
-  for (const i of [4, 5, 7]) row.cells[i].className = 'num';
-  row.cells[6].className = 'num missed-count';
-  row.cells[8].className = 'host-only action';
-  row.cells[8].hidden = !host;
+  columns.forEach((column, i) => { row.cells[FIXED_COLUMNS + i].className = `num ${column.className || ''}`.trim(); });
+  const action = row.cells[COLUMNS - 1];
+  action.className = 'host-only action';
+  action.hidden = !host;
 
   if (host) {
     const button = make('button', 'update-data', 'Update encounters data');
@@ -134,7 +104,7 @@ function upsert(info, prepend) {
       event.stopPropagation();
       openUpdate(encounter);
     });
-    row.cells[8].appendChild(button);
+    action.appendChild(button);
   }
 
   row.addEventListener('click', () => toggle(encounter));
@@ -156,28 +126,24 @@ function upsert(info, prepend) {
 }
 
 function fillRow(encounter) {
-  const { row } = encounter;
+  const { row, summary } = encounter;
   const { start, end } = span(encounter);
-  const casts = encounter.barrages;
-  const pending = encounter.state === 'pending';
-  const numbers = casts
-    ? [casts.length, count(casts, 'Blocked'), count(casts, 'Missed'), count(casts, 'Unresolved')]
-    : [null, null, null, null];
-
+  const waiting = encounter.state === 'pending' ? '…' : encounter.state === 'error' ? '?' : '';
   const cells = [
     encounter.title,
     encounter.zone || '',
     start ? when(start) : '',
     start && end > start ? duration(end - start) : '',
-    ...numbers.map((n) => (n == null ? (pending ? '…' : encounter.state === 'error' ? '?' : '') : n || '')),
+    ...columns.map((column) => (summary ? column.value(summary) || '' : waiting)),
   ];
   cells.forEach((text, i) => { row.cells[i].textContent = text; });
   row.cells[0].title = encounter.title;
   row.cells[1].title = encounter.zone || '';
-  row.classList.toggle('no-barrage', !!casts && casts.length === 0);
-  row.classList.toggle('pending', pending);
+  row.classList.toggle('pending', encounter.state === 'pending');
   row.title = encounter.state === 'error' ? `${encounter.error} Click to try again.` : encounter.source || '';
 }
+
+// ---- encounter detail ----
 
 function toggle(encounter) {
   if (expanded?.encounter === encounter) {
@@ -197,20 +163,15 @@ function toggle(encounter) {
 
   const detail = cell.querySelector('.enc-detail');
   detail.querySelector('.reset-zoom').addEventListener('click', () => expanded?.timeline?.reset());
-  for (const panel of detail.querySelectorAll('.side-panel')) {
-    const name = panel.dataset.panel;
-    panel.querySelector('.side-toggle').addEventListener('click', () => {
-      panelOpen.set(name, !(panelOpen.get(name) ?? true));
-      applyPanel(panel);
-    });
-    applyPanel(panel);
-  }
+  buildFilter(detail);
+  buildLegend(detail);
+  buildPanels(detail);
 
   expanded = { encounter, row: encounter.row, detailRow, detail, timeline: null };
   renderDetail();
 
   // Background analysis may not have reached this one yet, or it failed; ask for it now.
-  if (encounter.state !== 'done') {
+  if (encounter.state !== 'done' && host) {
     encounter.state = 'pending';
     renderDetail();
     send({ type: 'analyze', id: encounter.id });
@@ -226,135 +187,115 @@ function collapse() {
   expanded = null;
 }
 
+function renderDetail() {
+  if (!expanded) return;
+  const { encounter, detail } = expanded;
+  const message = detail.querySelector('.detail-message');
+  const timelineHost = detail.querySelector('.timeline');
+  const extras = [detail.querySelector('.marker-filter'), detail.querySelector('.legend')];
+  const { summary } = encounter;
+
+  expanded.timeline?.dispose();
+  expanded.timeline = null;
+  detail.querySelector('.cast-detail').hidden = true;
+  renderPanels(detail, summary);
+
+  const fail = (text) => {
+    message.textContent = text;
+    message.hidden = false;
+    timelineHost.hidden = true;
+    for (const node of extras) node.hidden = true;
+  };
+  if (encounter.state === 'error') return fail(encounter.error);
+  if (!summary) return fail('Analyzing this encounter…');
+  const fight = fightOf(encounter);
+  const lanes = window.AugurTimeline.lanesOf(summary);
+  if (!lanes.npcs.length && !lanes.players.length) return fail('Nothing to show for this encounter.');
+
+  message.hidden = true;
+  timelineHost.hidden = false;
+  for (const node of extras) node.hidden = false;
+  expanded.timeline = window.AugurTimeline.create(timelineHost, fight, (mechanic, item) => showItem(detail, mechanic, item, fight), isShown);
+}
+
+function showItem(detail, mechanic, item, fight) {
+  const box = detail.querySelector('.cast-detail');
+  box.hidden = false;
+  mechanic.showDetail({
+    title: box.querySelector('.cast-title'),
+    summary: box.querySelector('.cast-summary'),
+    lines: box.querySelector('.cast-lines'),
+  }, item, fight);
+}
+
+// ---- timeline filter and legend ----
+
+function isShown(key) {
+  return markerShown.get(key) ?? true;
+}
+
+// One switch per mechanic, turning all its marks on or off together.
+function buildFilter(detail) {
+  const filter = detail.querySelector('.marker-filter');
+  for (const mechanic of mechanics) {
+    if (!mechanic.draw) continue;
+    const label = make('label', 'marker-option');
+    label.dataset.marker = mechanic.key;
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = isShown(mechanic.key);
+    box.addEventListener('change', () => {
+      markerShown.set(mechanic.key, box.checked);
+      expanded?.timeline?.refresh();
+    });
+    label.append(box, make('i', mechanic.swatch), make('span', null, mechanic.label));
+    filter.appendChild(label);
+  }
+}
+
+function buildLegend(detail) {
+  const legend = detail.querySelector('.legend');
+  for (const entry of mechanics.flatMap((m) => m.legend || [])) {
+    const item = make('span');
+    item.append(make('i', entry.swatch), document.createTextNode(entry.label));
+    legend.appendChild(item);
+  }
+}
+
+// ---- side panels: one folding panel per mechanic ----
+
+function buildPanels(detail) {
+  const side = detail.querySelector('.side');
+  for (const mechanic of mechanics) {
+    if (!mechanic.panel) continue;
+    const panel = make('section', 'side-panel');
+    panel.dataset.panel = mechanic.key;
+    const heading = make('h3');
+    const toggleButton = make('button', 'side-toggle', mechanic.panel.title);
+    toggleButton.type = 'button';
+    toggleButton.addEventListener('click', () => {
+      panelOpen.set(mechanic.key, !(panelOpen.get(mechanic.key) ?? true));
+      applyPanel(panel);
+    });
+    heading.appendChild(toggleButton);
+    panel.append(heading, make('div', 'side-body'));
+    side.appendChild(panel);
+    applyPanel(panel);
+  }
+}
+
 function applyPanel(panel) {
   const open = panelOpen.get(panel.dataset.panel) ?? true;
   panel.classList.toggle('closed', !open);
   panel.querySelector('.side-toggle').setAttribute('aria-expanded', String(open));
 }
 
-function renderDetail() {
-  if (!expanded) return;
-  const { encounter, detail } = expanded;
-  const message = detail.querySelector('.detail-message');
-  const timelineHost = detail.querySelector('.timeline');
-  const casts = encounter.barrages;
-
-  expanded.timeline?.dispose();
-  expanded.timeline = null;
-  detail.querySelector('.cast-detail').hidden = true;
-  renderSide(detail, casts);
-
-  if (encounter.state === 'error') {
-    message.textContent = encounter.error;
-    message.hidden = false;
-    timelineHost.hidden = true;
-    return;
+function renderPanels(detail, summary) {
+  for (const mechanic of mechanics) {
+    if (!mechanic.panel) continue;
+    const body = detail.querySelector(`.side-panel[data-panel="${mechanic.key}"] .side-body`);
+    mechanic.panel.render(body, summary);
   }
-  if (!casts) {
-    message.textContent = 'Analyzing this encounter…';
-    message.hidden = false;
-    timelineHost.hidden = true;
-    return;
-  }
-  if (!casts.length) {
-    message.textContent = 'No barrages in this encounter.';
-    message.hidden = false;
-    timelineHost.hidden = true;
-    return;
-  }
-
-  message.hidden = true;
-  timelineHost.hidden = false;
-  const { start, end } = span(encounter);
-  const fight = { title: encounter.title, start, end, barrages: casts };
-  expanded.timeline = window.AugurTimeline.create(timelineHost, fight, (cast) => showCast(detail, cast, fight));
-}
-
-function renderSide(detail, casts) {
-  const counts = detail.querySelector('.counts');
-  counts.replaceChildren();
-  const list = casts || [];
-  const facts = [
-    ['Barrages', list.length, ''],
-    ['Blocked', count(list, 'Blocked'), 'blocked'],
-    ['Missed', count(list, 'Missed'), 'missed'],
-    ['No release', count(list, 'Unresolved'), 'unresolved'],
-  ];
-  const cancelled = count(list, 'Cancelled');
-  if (cancelled) facts.push(['Cancelled', cancelled, 'cancelled']);
-  for (const [label, value, cls] of facts) {
-    const dt = make('dt', null, label);
-    if (cls) dt.prepend(make('i', `sw ${cls}`));
-    counts.append(dt, make('dd', null, casts ? String(value) : '…'));
-  }
-
-  const stats = detail.querySelector('.npc-stats');
-  stats.replaceChildren();
-  const byNpc = new Map();
-  for (const c of list) {
-    if (!byNpc.has(c.npc)) byNpc.set(c.npc, []);
-    byNpc.get(c.npc).push(c);
-  }
-  for (const [npc, own] of byNpc) {
-    const released = own.filter((c) => c.outcome === 'Blocked' || c.outcome === 'Missed');
-    const card = make('div', 'stat');
-    const title = make('h4', null, npc);
-    title.title = npc;
-    const rate = make('div', 'rate', released.length ? `${count(own, 'Blocked')} / ${released.length} blocked` : 'none released');
-    const dl = make('dl');
-    const rowsOf = [
-      ['Type', own.some((c) => c.target) ? 'Targeted (raid)' : 'Untargeted (group)'],
-      ['Warning', fmtSeconds(median(released.filter((c) => c.warningSeen !== false).map((c) => c.resolvedAt - c.readiedAt)))],
-      ['Every', fmtSeconds(median(intervals(own)))],
-    ];
-    for (const [k, v] of rowsOf) dl.append(make('dt', null, k), make('dd', null, v));
-    card.append(title, rate, dl);
-    stats.appendChild(card);
-  }
-}
-
-function showCast(detail, cast, fight) {
-  const box = detail.querySelector('.cast-detail');
-  box.hidden = false;
-  const at = window.AugurTimeline.clock(cast.readiedAt - fight.start);
-  const outcome = cast.outcome === 'Unresolved' ? 'No release' : cast.outcome;
-  box.querySelector('.cast-title').textContent = `${at} · ${cast.npc}${cast.target ? ` → ${cast.target}` : ''} · ${outcome}`;
-
-  const parts = [];
-  if (cast.warningSeen === false) parts.push('released with no warning emote in the log');
-  else if (cast.resolvedAt != null && cast.outcome !== 'Cancelled') parts.push(`released ${cast.resolvedAt - cast.readiedAt} s after the warning`);
-  else if (cast.outcome === 'Unresolved') parts.push('never released or cancelled');
-  const onTime = (cast.bulwarks || []).filter((b) => cast.resolvedAt == null || b.at <= cast.resolvedAt);
-  const late = (cast.bulwarks || []).filter((b) => cast.resolvedAt != null && b.at > cast.resolvedAt);
-  if (onTime.length) parts.push(`${onTime.length} bulwark${onTime.length > 1 ? 's' : ''} in your group, last ${cast.resolvedAt - onTime[onTime.length - 1].at} s before release`);
-  else if (cast.outcome === 'Blocked' || cast.outcome === 'Missed') parts.push('no bulwark seen in your group before release');
-  if (late.length) parts.push(`${late.length} bulwark${late.length > 1 ? 's' : ''} pressed ${late[0].at - cast.resolvedAt} s too late`);
-  if (cast.splashHits) {
-    const players = `${cast.splashPlayers} player${cast.splashPlayers > 1 ? 's' : ''}`;
-    const amount = cast.splashDamage > 0 ? ` for ${damage(cast.splashDamage)}` : ', though it did no damage';
-    parts.push(`${cast.target ? 'splash' : 'barrage'} hit ${players}${amount}`);
-  }
-  if (cast.targetHits) parts.push(`target took ${damage(cast.targetDamage)}`);
-  box.querySelector('.cast-summary').textContent = `${parts.join('; ')}.`;
-
-  const list = box.querySelector('.cast-lines');
-  list.replaceChildren();
-  const target = (cast.target || '').toLowerCase();
-  for (const line of cast.lines || []) {
-    const li = document.createElement('li');
-    li.append(make('time', null, time(line.at)), document.createTextNode(line.text));
-    if (/releases a barrage|readies a barrage|prepares to unleash|cancels the barrage/.test(line.text)) li.className = 'kind-release';
-    else if (/applies a bulwark/.test(line.text)) li.className = 'kind-bulwark';
-    else if (/Barrage/.test(line.text)) {
-      const onTarget = target && new RegExp(` hits ${escape(target)} `, 'i').test(line.text);
-      li.className = `kind-hit${onTarget ? ' on-target' : ''}`;
-    }
-    list.appendChild(li);
-  }
-}
-
-function escape(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // ---- update dialog ----
@@ -430,11 +371,10 @@ function previewUpdate() {
   const zone = pendingUpdate.npcZone || pendingUpdate.zone || '(unknown zone)';
   const known = findRecord(zone, bosses);
   const name = [...bosses].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })).join(', ');
-  const adds = all - bosses.length;
   const where = known
-    ? `adds a fight to ${name} (recorded ${known.updates} time${known.updates === 1 ? '' : 's'})`
+    ? `adds a fight to ${name} (recorded ${plural(known.updates, 'time')})`
     : `creates a new encounter, ${name}`;
-  preview.textContent = `Saving ${where} in ${zone}, with ${adds} add${adds === 1 ? '' : 's'}.`;
+  preview.textContent = `Saving ${where} in ${zone}, with ${plural(all - bosses.length, 'add')}.`;
 }
 
 function findRecord(zone, bosses) {
@@ -465,6 +405,9 @@ dialog.querySelector('form').addEventListener('submit', (event) => {
 
 // ---- encounters data ----
 
+// Mechanics that record a yes/no per NPC in the encounters data (EncounterStore's NpcRecord).
+const dataFlags = mechanics.filter((m) => m.dataFlag).map((m) => m.dataFlag);
+
 function checkbox(checked, label) {
   const box = document.createElement('input');
   box.type = 'checkbox';
@@ -480,8 +423,8 @@ function checkbox(checked, label) {
 const openRecords = new Set(); // "zone|name" of expanded encounters, kept across re-renders
 
 function renderData() {
-  const host = $('data-zones');
-  host.replaceChildren();
+  const zonesHost = $('data-zones');
+  zonesHost.replaceChildren();
   if (!encounterData) return;
 
   $('data-path').textContent = encounterData.path ? `Saved in ${encounterData.path}` : '';
@@ -495,29 +438,29 @@ function renderData() {
     zones.get(record.zone).push(record);
   }
 
+  const headers = [['Encounter'], ...dataFlags.map((f) => [f.header, 'center']), ['Adds', 'num'], ['Fights', 'num'], ['Last updated']];
   for (const [zone, list] of zones) {
     const block = make('details', 'data-zone');
     block.open = true;
     const summary = make('summary', null, zone);
-    summary.append(make('span', 'muted', ` · ${list.length} encounter${list.length === 1 ? '' : 's'}`));
+    summary.append(make('span', 'muted', ` · ${plural(list.length, 'encounter')}`));
     block.appendChild(summary);
 
     const table = make('table', 'data-table');
     const head = table.createTHead().insertRow();
-    for (const [text, cls] of [['Encounter'], ['Barrage', 'center'], ['Adds', 'num'], ['Fights', 'num'], ['Last updated']]) {
-      head.appendChild(make('th', cls, text));
-    }
+    for (const [text, cls] of headers) head.appendChild(make('th', cls, text));
     const body = table.createTBody();
     for (const record of list) {
       const key = `${record.zone}|${record.name}`;
       const row = body.insertRow();
       row.className = 'record';
       row.tabIndex = 0;
-      const nameCell = row.insertCell();
-      nameCell.append(make('span', 'caret'), document.createTextNode(record.name));
-      const barrage = row.insertCell();
-      barrage.className = 'center';
-      barrage.appendChild(checkbox(record.bosses.some((b) => b.releasesBarrage), `${record.name} releases barrages`));
+      row.insertCell().append(make('span', 'caret'), document.createTextNode(record.name));
+      for (const flag of dataFlags) {
+        const cell = row.insertCell();
+        cell.className = 'center';
+        cell.appendChild(checkbox(record.bosses.some((b) => b[flag.field]), flag.describe(record.name)));
+      }
       Object.assign(row.insertCell(), { className: 'num', textContent: String(record.adds.length) });
       Object.assign(row.insertCell(), { className: 'num', textContent: String(record.updates) });
       row.insertCell().textContent = record.updated || '';
@@ -525,7 +468,7 @@ function renderData() {
       const detail = body.insertRow();
       detail.className = 'record-detail';
       const cell = detail.insertCell();
-      cell.colSpan = 5;
+      cell.colSpan = headers.length;
       cell.appendChild(npcList('Bosses', record.bosses));
       cell.appendChild(npcList('Adds', record.adds));
 
@@ -546,7 +489,7 @@ function renderData() {
       });
     }
     block.appendChild(table);
-    host.appendChild(block);
+    zonesHost.appendChild(block);
   }
 
   $('data-empty').hidden = zones.size > 0;
@@ -564,14 +507,17 @@ function npcList(title, npcs) {
   }
   const table = make('table');
   const head = table.createTHead().insertRow();
-  head.append(make('th', null, 'Name'), make('th', 'center', 'Barrage'));
+  head.appendChild(make('th', null, 'Name'));
+  for (const flag of dataFlags) head.appendChild(make('th', 'center', flag.header));
   const body = table.createTBody();
   for (const npc of npcs) {
     const row = body.insertRow();
     row.insertCell().textContent = npc.name;
-    const cell = row.insertCell();
-    cell.className = 'center';
-    cell.appendChild(checkbox(npc.releasesBarrage, `${npc.name} releases barrages`));
+    for (const flag of dataFlags) {
+      const cell = row.insertCell();
+      cell.className = 'center';
+      cell.appendChild(checkbox(npc[flag.field], flag.describe(npc.name)));
+    }
   }
   box.appendChild(table);
   return box;
@@ -596,7 +542,7 @@ function onEncounterData(data) {
     return;
   }
   const r = data.result;
-  const adds = `${r.adds} add${r.adds === 1 ? '' : 's'}`;
+  const adds = plural(r.adds, 'add');
   const detail = r.isNew ? `new encounter, ${adds}` : `${adds}${r.addsAdded ? `, ${r.addsAdded} new` : ''}`;
   notice(`Encounters data updated: ${r.name} in ${r.zone} (${detail}).`);
 }
@@ -618,21 +564,24 @@ $('tab-data').addEventListener('click', () => showTab('data'));
 
 // ---- data sources ----
 
+function applySummary(encounter, summary) {
+  encounter.state = 'done';
+  encounter.summary = summary;
+  fillRow(encounter);
+  if (expanded?.encounter === encounter) renderDetail();
+}
+
 function onAnalysis(data) {
   const encounter = encounters.get(data.id);
   if (!encounter) return;
   if (data.error) {
     encounter.state = 'error';
     encounter.error = data.error;
-  } else {
-    const s = data.summary;
-    encounter.state = 'done';
-    encounter.barrages = s.barrages || [];
-    encounter.summaryStart = s.startEpoch;
-    encounter.summaryEnd = s.endEpoch;
+    fillRow(encounter);
+    if (expanded?.encounter === encounter) renderDetail();
+    return;
   }
-  fillRow(encounter);
-  if (expanded?.encounter === encounter) renderDetail();
+  applySummary(encounter, data.summary);
 }
 
 function onEncounters(data) {
@@ -650,6 +599,8 @@ function onEncounters(data) {
   $('empty').textContent = 'No encounters in ACT yet. They appear here as fights end.';
 }
 
+buildHeader();
+
 if (host) {
   for (const node of document.querySelectorAll('.host-only')) node.hidden = false;
   $('refresh').addEventListener('click', () => send({ type: 'list' }));
@@ -664,27 +615,33 @@ if (host) {
   send({ type: 'ready' });
 }
 
-// Standalone page written by the CLI.
+// Standalone page written by the CLI's timeline command.
 const inline = document.getElementById('augur-data');
 if (inline) {
   const report = JSON.parse(inline.textContent);
   $('page-title').textContent = report.title || 'AugurACT';
   document.title = report.title || 'AugurACT';
-  const list = report.fights.map((f, i) => upsert({ ...f, id: String(i), barrages: f.barrages }, false));
-  if (!list.length) $('empty').textContent = 'No barrages found in these logs.';
+  const list = report.fights.map((f, i) => {
+    const encounter = upsert({ id: String(i), title: f.title, zone: f.zone, start: f.start, end: f.end, source: f.source }, false);
+    applySummary(encounter, f.summary);
+    return encounter;
+  });
+  if (!list.length) $('empty').textContent = 'No fights with mechanics found in these logs.';
 
-  // "#fight=12" opens that fight (0-based, in table order); "&cast=3" also opens that cast.
-  const wanted = Number((location.hash.match(/fight=(\d+)/) || [])[1] || 0);
-  const chosen = list[Math.min(wanted, list.length - 1)];
+  // "#fight=12" opens that fight (0-based, in table order); "&select=barrage:3" also opens that mechanic's
+  // item; "&hide=barrage,death" switches those marks off.
+  const hash = (name) => (location.hash.match(new RegExp(`${name}=([\\w:,-]+)`)) || [])[1];
+  const chosen = list[Math.min(Number(hash('fight') || 0), list.length - 1)];
   if (chosen) {
+    for (const key of (hash('hide') || '').split(',').filter(Boolean)) markerShown.set(key, false);
     toggle(chosen);
     chosen.row.scrollIntoView({ block: 'start' });
-    const cast = (location.hash.match(/cast=(\d+)/) || [])[1];
-    const pick = cast != null && chosen.barrages[Number(cast)];
-    if (pick && expanded?.timeline) {
-      expanded.timeline.select(pick);
-      const { start, end } = span(chosen);
-      showCast(expanded.detail, pick, { title: chosen.title, start, end, barrages: chosen.barrages });
+    const [key, index] = (hash('select') || '').split(':');
+    const mechanic = mechanics.find((m) => m.key === key);
+    const item = mechanic?.items?.(chosen.summary)[Number(index)];
+    if (item && expanded?.timeline) {
+      expanded.timeline.select(item);
+      showItem(expanded.detail, mechanic, item, fightOf(chosen));
     }
   }
 } else if (!host) {
