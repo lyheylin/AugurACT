@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using AugurACT.Core.EventTexts;
 
 namespace AugurACT.Core.Mechanics
 {
@@ -10,6 +11,9 @@ namespace AugurACT.Core.Mechanics
         {
             new BarrageDetector(context.SelfName, context.Zone),
             new DeathDetector(context),
+
+            // After DeathDetector, which adds the players it finds; event texts read the player list.
+            new EventTextDetector(context),
         };
     }
 }

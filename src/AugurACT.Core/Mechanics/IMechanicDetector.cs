@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using AugurACT.Core.Encounters;
 using AugurACT.Core.Eq2;
 
@@ -19,11 +22,12 @@ namespace AugurACT.Core.Mechanics
     // What every detector may need to know about the encounter it's reading.
     public sealed class ScanContext
     {
-        public ScanContext(string? selfName, string? zone, PlayerRoster roster)
+        public ScanContext(string? selfName, string? zone, PlayerRoster roster, IEnumerable<Regex>? eventTextBlacklist = null)
         {
             SelfName = string.IsNullOrEmpty(selfName) ? null : selfName;
             Zone = zone;
             Roster = roster;
+            EventTextBlacklist = eventTextBlacklist?.ToList() ?? new List<Regex>();
         }
 
         // The logging character, whose own lines say "YOU".
@@ -32,5 +36,8 @@ namespace AugurACT.Core.Mechanics
         public string? Zone { get; }
 
         public PlayerRoster Roster { get; }
+
+        // Event texts the user never wants listed (EncounterStore.Blacklist, as EventTextTemplate regexes).
+        public IReadOnlyList<Regex> EventTextBlacklist { get; }
     }
 }

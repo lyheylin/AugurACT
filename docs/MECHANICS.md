@@ -107,6 +107,69 @@ Check the rule against saved logs with `AugurACT.Cli deaths <logs>`, which lists
 their most common killers. It needs the full logs, not a prefiltered copy, because ability lines decide who's
 a player.
 
+## Event texts
+
+The game tells players what's happening through emotes, NPC speech and narration. The chat channel isn't in
+the log, so `EventTextDetector` tells them apart by shape:
+
+| Kind | Shape |
+| --- | --- |
+| Emote | `\aNPC <id> Boss:Boss\/a readies a barrage!` |
+| NPC say | `\aNPC <id> Boss:Boss\/a says, "..."` (also shouts, yells, whispers, tells) |
+| Narration | A colour code outside any link, on a line that isn't player chat: `\#00FFFFThresinet targets Tesla for Flesh Decay!` |
+
+Lines starting with an NPC link followed by `'s` are combat lines, not emotes. Item links carry their own colour
+code (`Repaired: \aITEM ...:\#f0c0a0Ring\/a`), so links are removed before looking for one.
+
+**Grouping.** Lines of one kind that differ only in their variable parts are one group, written as a template
+(`EventTextTemplate`): `{player}`, `{class}`, `{archetype}` and `{number}`, with a literal brace doubled.
+
+- **Player names are always variables.** They come from the encounter's player list (ACT's allies, or the
+  roster in the CLI), matched as whole words in any case (`TROLLISHUS`), plus `YOU` in capitals.
+- **Classes, archetypes and numbers** (`MAGE`, `20`, `1.2B`) become variables only when more than one value was
+  seen in the encounter; otherwise they stay as text. The dialog lets the user switch any of them.
+- **Each class or archetype in a list is its own variable**, and values never hold commas. Heroic Surge names
+  one, two or three archetypes, so it makes a group per count (`{archetype}!`, `{archetype}, {archetype}!`, and
+  `FIGHTER, PRIEST, SCOUT!` when only that one was seen), each blacklisted on its own.
+- Charmed players speak as NPCs (`\aNPC 277422 Tesla:Tesla\/a says, "Your blood calls to me."`); those go in the
+  player's own lane, with the name as `{player}`.
+
+**Not filtered out on purpose:** player-triggered narration (Heroic Surge), ability-ready notices ("Time Warp is
+now ready for use!") and system text look exactly like encounter narration. The user blacklists them. Nothing is
+blacklisted by default.
+
+**Templates become regexes** (`EventTextTemplate.ToRegex`, and `toRegex` in `web/eventtexts.js`, which must stay
+the same): literal text escaped, each variable a capture group, the whole line anchored, case ignored. The
+blacklist uses them now; trigger generation is meant to use them later.
+
+**Timers.** A group that repeats on a steady timer shows how often: "every 3:40 ± 13 s" (`EventTextTimer`).
+
+1. Lines of a group less than `SameEventSeconds` (2 s) apart are one event, like an AoE text logged per player.
+2. With at least `MinEvents` (4) events, take the intervals between them.
+3. Steadiness is their **coefficient of variation**, sample stdev ÷ mean. It has no unit, so a 20 s timer and a
+   4 min one are judged alike. The timer is steady when it's at most `SteadyMaxVariation`, **0.15 for now**.
+4. The interval shown is the mean; the ± is the largest distance of any interval from it, so it covers every
+   interval seen.
+
+How 0.15 was picked, from three logs (Olvorlec Nov 7, Akatsukifish Oct 31 and Nov 7), 101 groups with 4+ events:
+
+| Variation | Groups | Examples |
+| --- | --- | --- |
+| under 0.05 | 35 | The Arm of Lucan's four mechanics, 0.034-0.039 (every ~220 s, ± 13-16 s) |
+| 0.05 to 0.15 | 11 | Void Pox cures every ~20 s (0.08-0.14); "unable to synergize" every 4 s |
+| 0.15 to 0.40 | 17 | Void Pox in longer pulls (0.22-0.29), Poxlord's "commits {player} to memory" (0.19-0.27) |
+| 0.40 and over | 38 | Heroic Surge (0.86), Chaotic Influence (0.58) |
+
+Still to tune: a single missed line or a phase where the boss stops doubles one interval and fails the test;
+and short bursts with 1-second timestamps (lines 3-4 s apart) can pass as timers. Check
+`AugurACT.Cli texts`, which prints every group's variation, before changing the value.
+
+**Remove** takes a group off one fight's list and timeline while the page is open, without blacklisting it.
+"Show again" under the list brings them back.
+
+`AugurACT.Cli texts <logs> [--data encounters.json]` prints each fight's groups, with the values seen for any
+variable class or number, and each repeating group's interval and variation (`STEADY` when it passes).
+
 ## Encounters data in the plugin
 
 Separate from the catalog above, the plugin keeps the user's own record of encounters in
@@ -119,3 +182,17 @@ Separate from the catalog above, the plugin keeps the user's own record of encou
 - **Each NPC carries its own mechanic flags.** Today that is only `releasesBarrage`: yes once any recorded fight
   showed that NPC releasing a barrage (blocked or missed). A later fight without a release never turns it back
   to no, and a cancelled or unreleased warning doesn't count. More mechanics will add their own flags.
+- **Each encounter has a list of event texts** (`eventTexts`: kind, template, date added, and optionally the
+  user's `description` and a `timer`). Texts are added from a fight's list under the timeline ("Add +", which
+  picks the recorded encounter in the fight's zone whose bosses appear in it) or by hand on the Encounters data
+  tab, and edited or removed there. Adding a text the encounter already lists updates that entry; its button in
+  the fight's list reads "Update".
+- **Timers in the encounters data** (`timer`: mean, ±, intervals, fights). When the text is on a steady timer in
+  the fight, "Attach timer" (or "Update timer", if one is recorded) is ticked and filled in. Updating combines
+  the fight with the recorded timer: the mean is weighted by intervals, the ± widens to cover both, and each
+  fight (by start time) is counted once. Unticked, a recorded timer stays as it was. A timer can also be typed
+  (seconds or m:ss); typed values count as typed by hand (no intervals). Editing an entry and unticking the
+  timer removes it.
+- **The blacklist** (`eventTextBlacklist`, in the same file) holds templates never to list. Blacklisting a text
+  also removes it from every encounter's list. Summaries leave blacklisted lines out, so a change to the
+  blacklist makes the plugin analyze every encounter again. Manage it on the Blacklist tab.

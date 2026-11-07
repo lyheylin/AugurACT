@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using AugurACT.Core.Encounters;
+using AugurACT.Core.Mechanics;
 
 namespace AugurACT.Cli.Commands;
 
@@ -15,8 +16,9 @@ internal static class TimelineCommand
 
     private static readonly Regex NpcLink = new(@"\\aNPC -?\d+ (?<name>[^:\\]+):", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    public static int Run(List<string> paths, DateTime? since, string html)
+    public static int Run(List<string> paths, DateTime? since, string html, string? data)
     {
+        var blacklist = Blacklist(data);
         var files = LogFiles.Expand(paths, since);
         if (files.Count == 0)
         {
@@ -28,7 +30,7 @@ internal static class TimelineCommand
         var results = new ConcurrentBag<TimelinePage.Fight>();
         Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, file =>
         {
-            foreach (var fight in Scan(file))
+            foreach (var fight in Scan(file, blacklist, s => s.MechanicEvents > 0))
             {
                 results.Add(fight);
             }
@@ -41,13 +43,17 @@ internal static class TimelineCommand
         return 0;
     }
 
-    private static IEnumerable<TimelinePage.Fight> Scan(string path)
+    // The blacklist from an encounters data file (ACT's Config\AugurACT.encounters.json), if one is given.
+    public static List<Regex> Blacklist(string? data) => data == null ? new List<Regex>() : EncounterStore.Load(data).BlacklistRules();
+
+    // Fights of at least MinFightSeconds whose summary passes keep.
+    public static IEnumerable<TimelinePage.Fight> Scan(string path, List<Regex> blacklist, Func<EncounterSummary, bool> keep)
     {
         var self = LogFiles.LoggerName(path);
         var open = new List<(LogFight Fight, EncounterSummary.Builder Builder, Dictionary<string, int> Npcs)>();
         var splitter = new FightSplitter(EncounterSummary.MightMatter, fight =>
         {
-            var builder = new EncounterSummary.Builder("", fight.Zone ?? "", self);
+            var builder = new EncounterSummary.Builder("", fight.Zone ?? "", self, null, blacklist);
             var npcs = new Dictionary<string, int>();
             open.Add((fight, builder, npcs));
             return line =>
@@ -76,7 +82,7 @@ internal static class TimelineCommand
             }
 
             var summary = builder.Finish();
-            if (summary.MechanicEvents > 0)
+            if (keep(summary))
             {
                 yield return new TimelinePage.Fight(Title(fight, npcs, summary.Players), fight.Zone, Path.GetFileName(path), fight.Start, fight.End, summary);
             }

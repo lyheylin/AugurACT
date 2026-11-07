@@ -46,12 +46,15 @@ window.AugurUtil = (() => {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  // Fills a detail list with log lines; classify(text) gives each line's class.
-  function fillLines(list, lines, classify) {
+  // Fills a detail list with log lines; classify(text) gives each line's class. With the fight's start, each
+  // line's time is followed by the time into the fight: "22:53:09 (0:11)".
+  function fillLines(list, lines, classify, start) {
     list.replaceChildren();
     for (const line of lines || []) {
       const li = make('li', classify ? classify(line.text) : null);
-      li.append(make('time', null, time(line.at)), document.createTextNode(line.text));
+      const at = make('time', null, time(line.at));
+      if (start != null) at.appendChild(make('span', 'elapsed', ` (${clock(line.at - start)})`));
+      li.append(at, document.createTextNode(line.text));
       list.appendChild(li);
     }
   }

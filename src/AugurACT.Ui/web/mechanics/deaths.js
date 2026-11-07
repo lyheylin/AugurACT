@@ -67,7 +67,7 @@
       const nth = own.length > 1 ? `; death ${own.indexOf(death) + 1} of ${own.length} for ${death.name}` : '';
       const how = death.killer ? `killed by ${death.killer}` : 'died from pain and suffering, with no killer named in the log';
       view.summary.textContent = `${how}${nth}.`;
-      fillLines(view.lines, death.lines, () => 'kind-death');
+      fillLines(view.lines, death.lines, () => 'kind-death', fight.start);
     },
   });
 })();

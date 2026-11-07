@@ -8,6 +8,7 @@ src/AugurACT.Plugin    net48            ACT entry point. Builds AugurACT.dll. Mu
 src/AugurACT.Ui        net48            WebView2 host control.
 src/AugurACT.Ui/web                     The page shown in the plugin tab. The CLI inlines it into a standalone page.
 src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel and legend.
+src/AugurACT.Ui/web/eventtexts.js       Event text templates, the add/blacklist dialog, and the data and blacklist lists.
 src/AugurACT.Cli       net10.0          Runs Core over saved log files to tune rules. Runs on Linux/WSL.
 data/boss-mechanics.json                Boss catalog built by the CLI. Holds no player names.
 tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
@@ -30,6 +31,8 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 | `analyze` (id) | `analysis` (the encounter's summary with its barrages and player deaths) |
 | `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
+| `add-event-text`, `remove-event-text` (zone, name, kind, text) | `encounter-data` with a notice |
+| `blacklist-event-text` (kind, text), `unblacklist-event-text` (text) | `encounter-data` with `reanalyzing`; every encounter is analyzed again |
 
 A newly ended encounter arrives as `encounters` with `replace: false`. After a list, the plugin analyzes every
 encounter in the background, newest first; requests from the page go ahead of that queue. Encounter ids are
@@ -44,8 +47,8 @@ when the encounter's line count has changed since.
 Each mechanic is a detector in Core and a pair of files in the page, joined by one list on the summary:
 
 ```
-Core   IMechanicDetector (BarrageDetector, DeathDetector)  <- MechanicSet.Create, with a ScanContext and PlayerRoster
-       EncounterSummary.Build runs them all over an encounter's lines -> summary.barrages, summary.deaths, summary.players
+Core   IMechanicDetector (BarrageDetector, DeathDetector, EventTextDetector)  <- MechanicSet.Create, with a ScanContext and PlayerRoster
+       EncounterSummary.Build runs them all over an encounter's lines -> summary.barrages, .deaths, .eventTexts, .players
 Plugin EncounterBridge sends the summary as "analysis"; CLI "timeline" cuts logs into fights (FightSplitter) and embeds it
 Page   web/timeline.js draws lanes and the axis; web/mechanics/*.js register columns, marks, panels and legend
 ```

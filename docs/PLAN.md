@@ -78,6 +78,9 @@ Built end to end ahead of the phases below, to test the approach on a mechanic c
 - [x] A lane for every player in the encounter, from ACT's ally list, whether or not anything happened to them.
 - [x] Mechanics are self-contained: a Core detector registered in `MechanicSet`, and a JS and CSS file in
       `web/mechanics/` (see Adding a mechanic).
+- [x] Event texts: emotes, NPC speech and narration on the timeline, grouped by text with `{player}`, `{class}`,
+      `{archetype}` and `{number}` variables; added to an encounter's event texts in the encounters data, or
+      blacklisted (Blacklist tab). See Mechanics.
 - [ ] Verify in ACT (see below).
 
 ### Phase 2: Fight segmentation
@@ -145,6 +148,8 @@ These can't be checked without running inside ACT:
       count), and no NPCs.
 - [ ] The main NPC dialog lists the fight's enemies, and no players or pets. Saving writes
       `%APPDATA%\Advanced Combat Tracker\Config\AugurACT.encounters.json`.
+- [ ] Event texts: ACT's ally list makes player names variables; "Add +" finds the recorded encounter;
+      blacklisting Heroic Surge removes it from every fight after re-analysis, and un-blacklisting brings it back.
 
 ## Open questions
 

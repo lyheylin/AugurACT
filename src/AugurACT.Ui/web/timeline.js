@@ -1,7 +1,8 @@
 'use strict';
 
 // The timeline engine and the list of mechanics. The engine knows nothing about any one mechanic: it draws
-// the time axis, a lane per NPC that some mechanic names, and a lane per player in the encounter (always, so
+// the time axis, any shared lanes a mechanic asks for above the rest (like "Narration"), a lane per NPC that
+// some mechanic names, and a lane per player in the encounter (always, so
 // the participants are visible even when nothing happened to them), then lets each mechanic that's switched
 // on draw its own marks into those lanes. See docs/ADDING-A-MECHANIC.md for what a mechanic provides.
 //
@@ -9,6 +10,7 @@
 window.AugurTimeline = (() => {
   const SVG = 'http://www.w3.org/2000/svg';
   const LABEL_WIDTH = 190;
+  const TOP_LANE_HEIGHT = 22;
   const NPC_LANE_HEIGHT = 34;
   const PLAYER_LANE_HEIGHT = 20;
   const AXIS_HEIGHT = 22;
@@ -38,10 +40,11 @@ window.AugurTimeline = (() => {
   }
 
   function lanesOf(summary) {
+    const tops = [...new Set(mechanics.flatMap((m) => (m.topLanes ? m.topLanes(summary) : [])))];
     const npcs = [...new Set(mechanics.flatMap((m) => (m.npcLanes ? m.npcLanes(summary) : [])))];
     const players = [...new Set([...(summary.players || []), ...mechanics.flatMap((m) => (m.playerLanes ? m.playerLanes(summary) : []))])]
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-    return { npcs, players };
+    return { tops, npcs, players };
   }
 
   // fight: { title, start, end, summary }. onSelect(mechanic, item) runs when a mark is clicked.
@@ -52,11 +55,15 @@ window.AugurTimeline = (() => {
     let view = { ...full };
     let selected = null;
     const clipId = `plot-clip-${++instances}`;
-    const { npcs, players } = lanesOf(fight.summary);
+    const { tops, npcs, players } = lanesOf(fight.summary);
 
     // Lanes never depend on the filter, so the timeline keeps its size as marks are switched on and off.
     const lanes = new Map();
     let height = AXIS_HEIGHT;
+    for (const name of tops) {
+      lanes.set(`top|${name}`, { kind: 'top', name, y: height, height: TOP_LANE_HEIGHT });
+      height += TOP_LANE_HEIGHT;
+    }
     for (const name of npcs) {
       lanes.set(`npc|${name}`, { kind: 'npc', name, y: height, height: NPC_LANE_HEIGHT });
       height += NPC_LANE_HEIGHT;
@@ -83,7 +90,7 @@ window.AugurTimeline = (() => {
       let stripe = 0;
       let previous = null;
       for (const lane of lanes.values()) {
-        // A rule between the NPC lanes and the player lanes.
+        // A rule between the top, NPC and player lanes.
         if (previous && previous.kind !== lane.kind) {
           stripe = 0;
           el('line', { class: 'lane-divider', x1: 0, x2: w, y1: lane.y + 0.5, y2: lane.y + 0.5 }, svg);
@@ -112,6 +119,7 @@ window.AugurTimeline = (() => {
         if (!isShown(mechanic.key) || !mechanic.draw) continue;
         mechanic.draw(fight.summary, {
           x: (epoch) => x(epoch - origin),
+          topLane: (name) => lanes.get(`top|${name}`) || null,
           npcLane: (name) => lanes.get(`npc|${name}`) || null,
           playerLane: (name) => lanes.get(`player|${name}`) || null,
           el: (name, attrs, parent) => el(name, attrs, parent || plot),

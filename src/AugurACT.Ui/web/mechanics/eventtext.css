@@ -1,0 +1,86 @@
+/* Event texts: swatches, timeline marks, the list under the timeline, variable chips, the dialog, and the lists
+   on the Encounters data and Blacklist tabs. Colours are defined here, next to the marks that use them. */
+:root {
+  --et-emote: #b5631d;
+  --et-say: #2c8a8a;
+  --et-narration: #a23d7a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --et-emote: #e39a55;
+    --et-say: #5cc4c4;
+    --et-narration: #db7ab5;
+  }
+}
+
+.et-swatch { display: inline-block; width: 9px; height: 9px; flex: none; }
+.et-swatch.et-emote { background: var(--et-emote); transform: rotate(45deg) scale(0.85); }
+.et-swatch.et-say { background: var(--et-say); border-radius: 50%; }
+.et-swatch.et-narration { background: var(--et-narration); }
+
+.timeline .event-text { cursor: pointer; }
+.timeline .event-text .hit { fill: transparent; }
+.timeline .et-emote .mark { fill: var(--et-emote); }
+.timeline .et-say .mark { fill: var(--et-say); }
+.timeline .et-narration .mark { fill: var(--et-narration); }
+.timeline .event-text.selected .mark { stroke: var(--fg); stroke-width: 1.5; }
+.timeline .event-text.selected .hit { fill: none; stroke: var(--fg); stroke-width: 1; }
+.lines li.kind-et-emote { color: var(--et-emote); }
+.lines li.kind-et-say { color: var(--et-say); }
+.lines li.kind-et-narration { color: var(--et-narration); }
+
+/* A template with its variables as chips. */
+.et-text { white-space: pre-wrap; word-break: break-word; }
+.et-var { display: inline-block; padding: 0 4px; border-radius: 3px; background: var(--selected); color: var(--accent); font: 600 11px/1.5 Consolas, "Cascadia Mono", monospace; }
+.et-kind { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--muted); font-size: 12px; }
+.cast-title .et-kind { vertical-align: middle; margin-right: 4px; }
+
+/* Lists of event texts: under the timeline, per encounter, and the blacklist. */
+.mech-section { margin-top: 12px; }
+.mech-section > h3 { margin: 0 0 4px; }
+.et-table { width: 100%; }
+.et-table td { vertical-align: top; }
+.et-table td.et-text-cell { white-space: normal; width: 100%; }
+.et-values { font-size: 11px; margin-top: 1px; }
+.et-actions { text-align: right; }
+.et-actions button { padding: 1px 8px; font-size: 12px; margin-left: 4px; }
+.et-fight tr.et-row { cursor: pointer; }
+.et-fight tr.et-row:hover { background: var(--hover); }
+.et-fight tr.et-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.et-fight { max-height: none; }
+.et-list { margin: 6px 0 4px; }
+.et-list h4 { display: flex; align-items: center; gap: 10px; margin: 4px 0 2px; font-size: 12px; }
+.et-list td { padding: 2px 8px; }
+.et-list h4 .et-add, .data-head .et-add { padding: 0 8px; font-size: 12px; font-weight: normal; }
+.et-list .et-table { min-width: 0; width: 100%; }
+#blacklist-view .data-head { justify-content: space-between; }
+
+/* Add / blacklist dialog. */
+#text-dialog { width: min(680px, calc(100vw - 32px)); }
+.text-field { display: flex; flex-direction: column; gap: 3px; }
+.text-field > span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.text-field select, .text-field input { font: inherit; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+#text-input { font: 12px/1.5 Consolas, "Cascadia Mono", monospace; }
+.text-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.text-row .text-field { flex: 1 1 200px; }
+.et-chips { padding: 6px 8px; border: 1px dashed var(--rule); border-radius: 4px; background: var(--panel); white-space: pre-wrap; word-break: break-word; min-height: 2em; }
+.et-chip { padding: 0 3px; margin: 0 1px; border: 0; border-bottom: 1.5px dashed var(--accent); border-radius: 0; background: transparent; font: inherit; color: var(--fg); }
+.et-chip.variable { border: 0; border-radius: 3px; padding: 0 4px; background: var(--selected); color: var(--accent); font: 600 11px/1.5 Consolas, "Cascadia Mono", monospace; }
+.et-chip:disabled { color: inherit; cursor: default; }
+.et-chip.variable:disabled { color: var(--accent); }
+#text-seen { font-size: 12px; color: var(--muted); display: grid; gap: 2px; }
+#text-error, #text-check.error { color: var(--error); }
+#text-check, #text-error { font-size: 12px; min-height: 1.4em; }
+.et-removed { margin-top: 6px; }
+button.link { border: 0; background: transparent; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
+button.link:hover:not(:disabled) { background: transparent; }
+.text-field textarea { font: inherit; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); resize: vertical; }
+.et-timer-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.et-timer-values { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.et-timer-values input { font: 12px/1.4 Consolas, "Cascadia Mono", monospace; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.et-timer-values.off { opacity: 0.45; }
+.et-description { font-size: 12px; color: var(--muted); white-space: pre-wrap; margin-top: 1px; }
+.et-description::before { content: "\201C"; }
+.et-description::after { content: "\201D"; }
+button.et-recorded { color: var(--check); border-color: var(--check); }

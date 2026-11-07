@@ -19,6 +19,10 @@ namespace AugurACT.Core.Host
         public const string Analyze = "analyze";
         public const string EncounterNpcs = "encounter-npcs";
         public const string UpdateEncounter = "update-encounter";
+        public const string AddEventText = "add-event-text";
+        public const string RemoveEventText = "remove-event-text";
+        public const string BlacklistEventText = "blacklist-event-text";
+        public const string UnblacklistEventText = "unblacklist-event-text";
 
         public static string ToJson<T>(T message)
         {
@@ -58,6 +62,24 @@ namespace AugurACT.Core.Host
         // For "update-encounter": the NPCs the user chose as the encounter's main NPCs.
         [DataMember(Name = "bosses")]
         public List<string>? Bosses { get; set; }
+
+        // For the event text requests: the recorded encounter (zone and name, as in EncounterRecord) and the
+        // text, with its kind.
+        [DataMember(Name = "zone")]
+        public string? Zone { get; set; }
+
+        [DataMember(Name = "name")]
+        public string? Name { get; set; }
+
+        [DataMember(Name = "kind")]
+        public string? Kind { get; set; }
+
+        [DataMember(Name = "text")]
+        public string? Text { get; set; }
+
+        // For "add-event-text": the entry to save.
+        [DataMember(Name = "entry")]
+        public EventTextEdit? Entry { get; set; }
     }
 
     // One ACT encounter, without its analysis.
@@ -202,5 +224,17 @@ namespace AugurACT.Core.Host
 
         [DataMember(Name = "error", Order = 5, EmitDefaultValue = false)]
         public string? Error { get; set; }
+
+        [DataMember(Name = "blacklist", Order = 6)]
+        public List<EventTextRecord> Blacklist { get; set; } = new List<EventTextRecord>();
+
+        // What an event text or blacklist edit did, to show the user.
+        [DataMember(Name = "notice", Order = 7, EmitDefaultValue = false)]
+        public string? Notice { get; set; }
+
+        // True when the blacklist changed: every encounter is being analyzed again, and the page should ask for
+        // the one it shows.
+        [DataMember(Name = "reanalyzing", Order = 8, EmitDefaultValue = false)]
+        public bool Reanalyzing { get; set; }
     }
 }

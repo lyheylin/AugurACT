@@ -9,6 +9,7 @@
   <!-- One stylesheet and one script per mechanic, in web/mechanics/. -->
   <link rel="stylesheet" href="mechanics/barrage.css">
   <link rel="stylesheet" href="mechanics/deaths.css">
+  <link rel="stylesheet" href="mechanics/eventtext.css">
 </head>
 <body>
   <header class="top">
@@ -16,6 +17,7 @@
     <nav class="tabs host-only" role="tablist" hidden>
       <button type="button" role="tab" id="tab-encounters" aria-selected="true" aria-controls="encounters-view">Encounters</button>
       <button type="button" role="tab" id="tab-data" aria-selected="false" aria-controls="data-view">Encounters data</button>
+      <button type="button" role="tab" id="tab-blacklist" aria-selected="false" aria-controls="blacklist-view">Blacklist</button>
     </nav>
     <button type="button" id="refresh" class="host-only" hidden>Refresh list</button>
   </header>
@@ -44,6 +46,8 @@
     <div id="data-zones"></div>
   </section>
 
+  <section id="blacklist-view" role="tabpanel" aria-labelledby="tab-blacklist" hidden></section>
+
   <dialog id="update-dialog" aria-labelledby="update-title">
     <form method="dialog">
       <h2 id="update-title">Update encounters data</h2>
@@ -55,6 +59,52 @@
       <div class="dialog-buttons">
         <button type="submit" value="cancel" formnovalidate>Cancel</button>
         <button type="submit" value="save" id="update-save" class="primary" disabled>Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="text-dialog" aria-labelledby="text-title">
+    <form method="dialog">
+      <h2 id="text-title">Add event text</h2>
+      <p id="text-intro" class="muted"></p>
+      <div class="text-row">
+        <label class="text-field" id="text-encounter-row"><span>Encounter</span><select id="text-encounter"></select></label>
+        <label class="text-field"><span>Kind</span>
+          <select id="text-kind">
+            <option value="emote">Emote</option>
+            <option value="say">NPC say</option>
+            <option value="narration">Narration</option>
+          </select>
+        </label>
+      </div>
+      <p id="text-encounter-hint" class="muted hint"></p>
+      <label class="text-field"><span>Text</span><input id="text-input" type="text" spellcheck="false" autocomplete="off"></label>
+      <div class="text-row">
+        <p class="muted hint">Variables: {player} {class} {archetype} {number}. Write a literal brace as {{ or }}.</p>
+        <button type="button" id="text-player" title="Select a name in the text, then click this">Selection is a player name</button>
+      </div>
+      <div id="text-chips" class="et-chips" aria-label="Parts of the text; click one to switch it between fixed text and a variable"></div>
+      <div id="text-seen"></div>
+      <p id="text-check" role="status"></p>
+      <p id="text-existing" class="muted hint"></p>
+      <label class="text-field" id="text-description-row"><span>Description</span>
+        <textarea id="text-description" rows="2" placeholder="Your note: what it means, what to do"></textarea>
+      </label>
+      <div class="text-field" id="text-timer-row">
+        <label class="et-timer-toggle"><input type="checkbox" id="text-timer-on"> <span id="text-timer-label">Attach timer</span></label>
+        <div id="text-timer-values" class="et-timer-values">
+          <span>every</span>
+          <input id="text-timer-mean" type="text" inputmode="decimal" size="7" aria-label="Seconds between events, or m:ss" placeholder="3:40">
+          <span>±</span>
+          <input id="text-timer-spread" type="text" inputmode="decimal" size="4" aria-label="Plus or minus seconds" placeholder="13">
+          <span>s</span>
+        </div>
+        <p id="text-timer-note" class="muted hint"></p>
+      </div>
+      <p id="text-error" role="alert"></p>
+      <div class="dialog-buttons">
+        <button type="submit" value="cancel" formnovalidate>Cancel</button>
+        <button type="submit" value="save" id="text-save" class="primary">Add</button>
       </div>
     </form>
   </dialog>
@@ -77,6 +127,8 @@
           <p class="cast-summary"></p>
           <ol class="cast-lines lines"></ol>
         </div>
+        <!-- Lists some mechanics add under the timeline. -->
+        <div class="sections"></div>
       </div>
       <!-- A column of folding panels, one per mechanic. -->
       <aside class="side" aria-label="Encounter details"></aside>
@@ -85,8 +137,10 @@
 
   <script src="util.js"></script>
   <script src="timeline.js"></script>
+  <script src="eventtexts.js"></script>
   <script src="mechanics/barrage.js"></script>
   <script src="mechanics/deaths.js"></script>
+  <script src="mechanics/eventtext.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

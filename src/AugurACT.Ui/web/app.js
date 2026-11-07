@@ -44,6 +44,8 @@ function send(message) {
   host?.postMessage(message);
 }
 
+window.AugurEventTexts.init({ send, host: !!host, getData: () => encounterData });
+
 // ---- encounter list ----
 
 const FIXED_COLUMNS = 4; // encounter, zone, when, length
@@ -166,6 +168,7 @@ function toggle(encounter) {
   buildFilter(detail);
   buildLegend(detail);
   buildPanels(detail);
+  buildSections(detail);
 
   expanded = { encounter, row: encounter.row, detailRow, detail, timeline: null };
   renderDetail();
@@ -199,6 +202,7 @@ function renderDetail() {
   expanded.timeline = null;
   detail.querySelector('.cast-detail').hidden = true;
   renderPanels(detail, summary);
+  renderSections();
 
   const fail = (text) => {
     message.textContent = text;
@@ -210,7 +214,7 @@ function renderDetail() {
   if (!summary) return fail('Analyzing this encounter…');
   const fight = fightOf(encounter);
   const lanes = window.AugurTimeline.lanesOf(summary);
-  if (!lanes.npcs.length && !lanes.players.length) return fail('Nothing to show for this encounter.');
+  if (!lanes.tops.length && !lanes.npcs.length && !lanes.players.length) return fail('Nothing to show for this encounter.');
 
   message.hidden = true;
   timelineHost.hidden = false;
@@ -221,6 +225,7 @@ function renderDetail() {
 function showItem(detail, mechanic, item, fight) {
   const box = detail.querySelector('.cast-detail');
   box.hidden = false;
+  box.shownItem = item;
   mechanic.showDetail({
     title: box.querySelector('.cast-title'),
     summary: box.querySelector('.cast-summary'),
@@ -295,6 +300,54 @@ function renderPanels(detail, summary) {
     if (!mechanic.panel) continue;
     const body = detail.querySelector(`.side-panel[data-panel="${mechanic.key}"] .side-body`);
     mechanic.panel.render(body, summary);
+  }
+}
+
+// ---- sections under the timeline: lists a mechanic shows in full ----
+
+function buildSections(detail) {
+  const host = detail.querySelector('.sections');
+  for (const mechanic of mechanics) {
+    if (!mechanic.section) continue;
+    const section = make('section', 'mech-section');
+    section.dataset.section = mechanic.key;
+    section.append(make('h3', null, mechanic.section.title), make('div', 'section-body'));
+    host.appendChild(section);
+  }
+}
+
+// Also run when the encounters data changes, since sections can show what's recorded.
+function renderSections() {
+  if (!expanded) return;
+  const { encounter, detail } = expanded;
+  const fight = fightOf(encounter);
+  for (const mechanic of mechanics) {
+    if (!mechanic.section) continue;
+    const body = detail.querySelector(`.mech-section[data-section="${mechanic.key}"] .section-body`);
+    mechanic.section.render(body, encounter.summary, {
+      encounter,
+      host: !!host,
+      start: fight.start,
+      // Redraws the timeline and the sections after a mechanic changed what it shows. Pass the item that
+      // went away to clear its detail if it's the one shown.
+      refresh(gone) {
+        const box = expanded?.detail.querySelector('.cast-detail');
+        if (gone && box?.shownItem === gone) {
+          box.hidden = true;
+          box.shownItem = null;
+          expanded.timeline?.select(null);
+        }
+        expanded?.timeline?.refresh();
+        renderSections();
+      },
+      // Selects an item on the timeline and shows its detail, as a click on its mark does.
+      select(item) {
+        if (!expanded?.timeline) return;
+        expanded.timeline.select(item);
+        showItem(expanded.detail, mechanic, item, fight);
+        expanded.detail.querySelector('.cast-detail').scrollIntoView({ block: 'nearest' });
+      },
+    });
   }
 }
 
@@ -471,6 +524,7 @@ function renderData() {
       cell.colSpan = headers.length;
       cell.appendChild(npcList('Bosses', record.bosses));
       cell.appendChild(npcList('Adds', record.adds));
+      cell.appendChild(window.AugurEventTexts.recordSection(record));
 
       const setOpen = (open) => {
         detail.hidden = !open;
@@ -526,8 +580,18 @@ function npcList(title, npcs) {
 function onEncounterData(data) {
   encounterData = data;
   renderData();
+  window.AugurEventTexts.renderBlacklist($('blacklist-view'));
+  renderSections();
+
+  // The blacklist changed: the plugin analyzes everything again; ask for the open one first.
+  if (data.reanalyzing && expanded) {
+    expanded.encounter.state = 'pending';
+    send({ type: 'analyze', id: expanded.encounter.id });
+  }
+
   if (data.updatedId == null) {
     if (data.error) notice(data.error, true);
+    else if (data.notice) notice(data.notice);
     return;
   }
 
@@ -551,16 +615,16 @@ $('data-filter').addEventListener('input', renderData);
 
 // ---- tabs ----
 
+const TABS = ['encounters', 'data', 'blacklist'];
+
 function showTab(name) {
-  const data = name === 'data';
-  $('tab-encounters').setAttribute('aria-selected', String(!data));
-  $('tab-data').setAttribute('aria-selected', String(data));
-  $('encounters-view').hidden = data;
-  $('data-view').hidden = !data;
+  for (const tab of TABS) {
+    $(`tab-${tab}`).setAttribute('aria-selected', String(tab === name));
+    $(`${tab}-view`).hidden = tab !== name;
+  }
 }
 
-$('tab-encounters').addEventListener('click', () => showTab('encounters'));
-$('tab-data').addEventListener('click', () => showTab('data'));
+for (const tab of TABS) $(`tab-${tab}`).addEventListener('click', () => showTab(tab));
 
 // ---- data sources ----
 
