@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using AugurACT.Core.EventTexts;
 using System.IO;
 using System.Linq;
@@ -55,17 +54,17 @@ namespace AugurACT.Core.Encounters
         // How many mechanic events of any kind were found.
         public int MechanicEvents { get; private set; }
 
-        // players is ACT's ally list; without it the log has to show who the players are. blacklist holds the
-        // event texts to leave out (EventTextTemplate regexes).
+        // players is ACT's ally list; without it the log has to show who the players are. options are the user's
+        // settings from the encounters data (ScanOptions.From).
         public static EncounterSummary Build(
             string title,
             string zone,
             IEnumerable<string> lines,
             string? selfName = null,
             IEnumerable<string>? players = null,
-            IEnumerable<Regex>? blacklist = null)
+            ScanOptions? options = null)
         {
-            var builder = new Builder(title, zone, selfName, players, blacklist);
+            var builder = new Builder(title, zone, selfName, players, options);
             foreach (var line in lines)
             {
                 builder.Add(line);
@@ -99,11 +98,11 @@ namespace AugurACT.Core.Encounters
             private readonly bool[] wanted;
 
             public Builder(
-                string title, string zone, string? selfName = null, IEnumerable<string>? players = null, IEnumerable<Regex>? blacklist = null)
+                string title, string zone, string? selfName = null, IEnumerable<string>? players = null, ScanOptions? options = null)
             {
                 summary = new EncounterSummary { Title = title, Zone = zone };
                 roster = new PlayerRoster(selfName, players);
-                detectors = MechanicSet.Create(new ScanContext(selfName, zone, roster, blacklist));
+                detectors = MechanicSet.Create(new ScanContext(selfName, zone, roster, options));
                 wanted = new bool[detectors.Count];
             }
 

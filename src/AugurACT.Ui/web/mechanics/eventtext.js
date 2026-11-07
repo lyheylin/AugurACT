@@ -3,7 +3,7 @@
 // Event texts: emotes, NPC speech and narration. A mark per line, in the speaker's lane (narration has its own
 // lane at the top), shaped and coloured by kind. Lines that differ only in their variables are one group: a
 // click selects the whole group. The list under the timeline adds a group to the encounters data or blacklists
-// it (web/eventtexts.js), or removes it from this fight's list and timeline only. A group that repeats on a
+// it (web/eventtexts/), or removes it from this fight's list and timeline only. A group that repeats on a
 // steady timer (EventTextTimer in Core) shows its interval. Data: summary.eventTexts (EventTextGroup).
 (() => {
   const { make, fillLines, plural } = window.AugurUtil;

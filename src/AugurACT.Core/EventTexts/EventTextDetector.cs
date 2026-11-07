@@ -106,7 +106,7 @@ namespace AugurACT.Core.EventTexts
 
         private bool IsBlacklisted(string text)
         {
-            foreach (var rule in context.EventTextBlacklist)
+            foreach (var rule in context.Options.EventTextBlacklist)
             {
                 if (rule.IsMatch(text))
                 {

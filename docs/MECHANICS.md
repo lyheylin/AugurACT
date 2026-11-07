@@ -138,7 +138,7 @@ code (`Repaired: \aITEM ...:\#f0c0a0Ring\/a`), so links are removed before looki
 now ready for use!") and system text look exactly like encounter narration. The user blacklists them. Nothing is
 blacklisted by default.
 
-**Templates become regexes** (`EventTextTemplate.ToRegex`, and `toRegex` in `web/eventtexts.js`, which must stay
+**Templates become regexes** (`EventTextTemplate.ToRegex`, and `toRegex` in `web/eventtexts/format.js`, which must stay
 the same): literal text escaped, each variable a capture group, the whole line anchored, case ignored. The
 blacklist uses them now; trigger generation is meant to use them later.
 

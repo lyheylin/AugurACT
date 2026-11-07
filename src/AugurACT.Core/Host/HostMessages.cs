@@ -6,6 +6,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using AugurACT.Core.Encounters;
+using AugurACT.Core.EventTexts;
 using AugurACT.Core.Mechanics;
 
 namespace AugurACT.Core.Host
@@ -19,10 +20,8 @@ namespace AugurACT.Core.Host
         public const string Analyze = "analyze";
         public const string EncounterNpcs = "encounter-npcs";
         public const string UpdateEncounter = "update-encounter";
-        public const string AddEventText = "add-event-text";
-        public const string RemoveEventText = "remove-event-text";
-        public const string BlacklistEventText = "blacklist-event-text";
-        public const string UnblacklistEventText = "unblacklist-event-text";
+
+        // Requests that edit the encounters data are listed in StoreEditSet.
 
         public static string ToJson<T>(T message)
         {
@@ -33,13 +32,17 @@ namespace AugurACT.Core.Host
             }
         }
 
-        public static PageRequest? ParseRequest(string json)
+        public static PageRequest? ParseRequest(string json) => Parse<PageRequest>(json);
+
+        // Reads a page message as T, ignoring fields T doesn't have; null when it isn't valid JSON for T.
+        public static T? Parse<T>(string json)
+            where T : class
         {
             try
             {
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
                 {
-                    return (PageRequest)new DataContractJsonSerializer(typeof(PageRequest)).ReadObject(stream);
+                    return (T)new DataContractJsonSerializer(typeof(T)).ReadObject(stream);
                 }
             }
             catch (SerializationException)
@@ -62,24 +65,6 @@ namespace AugurACT.Core.Host
         // For "update-encounter": the NPCs the user chose as the encounter's main NPCs.
         [DataMember(Name = "bosses")]
         public List<string>? Bosses { get; set; }
-
-        // For the event text requests: the recorded encounter (zone and name, as in EncounterRecord) and the
-        // text, with its kind.
-        [DataMember(Name = "zone")]
-        public string? Zone { get; set; }
-
-        [DataMember(Name = "name")]
-        public string? Name { get; set; }
-
-        [DataMember(Name = "kind")]
-        public string? Kind { get; set; }
-
-        [DataMember(Name = "text")]
-        public string? Text { get; set; }
-
-        // For "add-event-text": the entry to save.
-        [DataMember(Name = "entry")]
-        public EventTextEdit? Entry { get; set; }
     }
 
     // One ACT encounter, without its analysis.
@@ -228,13 +213,21 @@ namespace AugurACT.Core.Host
         [DataMember(Name = "blacklist", Order = 6)]
         public List<EventTextRecord> Blacklist { get; set; } = new List<EventTextRecord>();
 
-        // What an event text or blacklist edit did, to show the user.
+        // What a StoreEditSet edit did, to show the user.
         [DataMember(Name = "notice", Order = 7, EmitDefaultValue = false)]
         public string? Notice { get; set; }
 
-        // True when the blacklist changed: every encounter is being analyzed again, and the page should ask for
-        // the one it shows.
+        // True when an edit changed the scan options (like the blacklist): every encounter is being analyzed
+        // again, and the page should ask for the one it shows.
         [DataMember(Name = "reanalyzing", Order = 8, EmitDefaultValue = false)]
         public bool Reanalyzing { get; set; }
+
+        // Everything the page shows from the store. Data a feature adds to EncounterStore goes here too.
+        public EncounterDataMessage With(EncounterStore store)
+        {
+            Encounters = store.Encounters;
+            Blacklist = store.Blacklist;
+            return this;
+        }
     }
 }

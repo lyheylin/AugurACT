@@ -18,7 +18,7 @@ internal static class TimelineCommand
 
     public static int Run(List<string> paths, DateTime? since, string html, string? data)
     {
-        var blacklist = Blacklist(data);
+        var options = Options(data);
         var files = LogFiles.Expand(paths, since);
         if (files.Count == 0)
         {
@@ -30,7 +30,7 @@ internal static class TimelineCommand
         var results = new ConcurrentBag<TimelinePage.Fight>();
         Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, file =>
         {
-            foreach (var fight in Scan(file, blacklist, s => s.MechanicEvents > 0))
+            foreach (var fight in Scan(file, options, s => s.MechanicEvents > 0))
             {
                 results.Add(fight);
             }
@@ -43,17 +43,18 @@ internal static class TimelineCommand
         return 0;
     }
 
-    // The blacklist from an encounters data file (ACT's Config\AugurACT.encounters.json), if one is given.
-    public static List<Regex> Blacklist(string? data) => data == null ? new List<Regex>() : EncounterStore.Load(data).BlacklistRules();
+    // The user's settings (like the event text blacklist) from an encounters data file, ACT's
+    // Config\AugurACT.encounters.json, if one is given.
+    public static ScanOptions Options(string? data) => data == null ? ScanOptions.None : ScanOptions.From(EncounterStore.Load(data));
 
     // Fights of at least MinFightSeconds whose summary passes keep.
-    public static IEnumerable<TimelinePage.Fight> Scan(string path, List<Regex> blacklist, Func<EncounterSummary, bool> keep)
+    public static IEnumerable<TimelinePage.Fight> Scan(string path, ScanOptions options, Func<EncounterSummary, bool> keep)
     {
         var self = LogFiles.LoggerName(path);
         var open = new List<(LogFight Fight, EncounterSummary.Builder Builder, Dictionary<string, int> Npcs)>();
         var splitter = new FightSplitter(EncounterSummary.MightMatter, fight =>
         {
-            var builder = new EncounterSummary.Builder("", fight.Zone ?? "", self, null, blacklist);
+            var builder = new EncounterSummary.Builder("", fight.Zone ?? "", self, null, options);
             var npcs = new Dictionary<string, int>();
             open.Add((fight, builder, npcs));
             return line =>

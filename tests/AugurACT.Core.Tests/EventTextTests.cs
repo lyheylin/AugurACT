@@ -14,6 +14,9 @@ public class EventTextTests
     private static readonly string[] Players = { "Healerc", "Tanka", "Arrowss" };
 
     private static List<EventTextGroup> Run(IEnumerable<Regex>? blacklist, params string[] bodies) =>
+        Run(new ScanOptions { EventTextBlacklist = (blacklist ?? Array.Empty<Regex>()).ToList() }, bodies);
+
+    private static List<EventTextGroup> Run(ScanOptions options, params string[] bodies) =>
         EncounterSummary.Build(
             "Test",
             "Test Zone",
@@ -21,9 +24,9 @@ public class EventTextTests
                 .Concat(bodies.Select((b, i) => $"({T0 + i})[Sat Oct 10 08:49:35 2026] {b}")),
             "Healerc",
             Players,
-            blacklist).EventTexts;
+            options).EventTexts;
 
-    private static List<EventTextGroup> Run(params string[] bodies) => Run(null, bodies);
+    private static List<EventTextGroup> Run(params string[] bodies) => Run(ScanOptions.None, bodies);
 
     private static EventTextEdit Entry(string kind, string text, string? description = null) =>
         new() { Kind = kind, Text = text, Description = description };

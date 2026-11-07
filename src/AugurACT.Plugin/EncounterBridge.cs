@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using Advanced_Combat_Tracker;
 using AugurACT.Core.Encounters;
@@ -29,7 +28,7 @@ namespace AugurACT.Plugin
         private readonly Dictionary<string, EncounterSummary> summaries = new Dictionary<string, EncounterSummary>();
         private readonly Thread worker;
         private EncounterStore? store;
-        private List<Regex>? blacklistRules;
+        private ScanOptions? scanOptions;
         private bool stopping;
 
         public EncounterBridge(Action<string> post, Action<string> setStatus, string storePath)
@@ -65,12 +64,9 @@ namespace AugurACT.Plugin
                     var bosses = request.Bosses ?? new List<string>();
                     Enqueue(() => UpdateEncounter(updateId, bosses), urgent: true);
                     break;
-                case HostMessages.AddEventText:
-                case HostMessages.RemoveEventText:
-                case HostMessages.BlacklistEventText:
-                case HostMessages.UnblacklistEventText:
-                    var edit = request;
-                    Enqueue(() => EditEventTexts(edit), urgent: true);
+                // Edits to the encounters data that features declare in Core (StoreEditSet).
+                case var type when StoreEditSet.TryGet(type, out var edit):
+                    Enqueue(() => EditStore(edit, json), urgent: true);
                     break;
             }
         }
@@ -195,7 +191,7 @@ namespace AugurACT.Plugin
         {
             var lines = CopyLines(encounter);
             var self = string.IsNullOrEmpty(encounter.CharName) ? ActGlobals.charName : encounter.CharName;
-            var summary = EncounterSummary.Build(encounter.Title, encounter.ZoneName, lines, self, Allies(encounter), BlacklistRules());
+            var summary = EncounterSummary.Build(encounter.Title, encounter.ZoneName, lines, self, Allies(encounter), Options());
             lock (gate)
             {
                 summaries[id] = summary;
@@ -282,67 +278,44 @@ namespace AugurACT.Plugin
                 ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: encounters data update failed");
             }
 
-            message.Encounters = Store().Encounters;
+            message.With(Store());
             post(HostMessages.ToJson(message));
         }
 
-        // Event texts of a recorded encounter, and the blacklist. A blacklist change re-analyzes every encounter,
-        // since the summaries leave blacklisted texts out.
-        private void EditEventTexts(PageRequest request)
+        // Runs one StoreEditSet edit, saves, and answers with the encounters data. An edit that changes the scan
+        // options (like the event text blacklist) makes every encounter be analyzed again.
+        private void EditStore(IStoreEdit edit, string json)
         {
             var message = new EncounterDataMessage { Path = storePath };
             try
             {
                 var current = Store();
-                var today = DateTime.Now;
-                switch (request.Type)
-                {
-                    case HostMessages.AddEventText:
-                        message.Notice = current.SaveEventText(request.Zone, request.Name, request.Entry ?? new EventTextEdit(), today)
-                            ? $"Event text added to {request.Name}."
-                            : $"Event text updated in {request.Name}.";
-                        break;
-                    case HostMessages.RemoveEventText:
-                        current.RemoveEventText(request.Zone, request.Name, request.Text);
-                        message.Notice = $"Event text removed from {request.Name}.";
-                        break;
-                    case HostMessages.BlacklistEventText:
-                        message.Notice = current.AddToBlacklist(request.Kind, request.Text, today)
-                            ? "Event text blacklisted. Encounters are being analyzed again without it."
-                            : "That event text was already blacklisted.";
-                        message.Reanalyzing = true;
-                        break;
-                    case HostMessages.UnblacklistEventText:
-                        current.RemoveFromBlacklist(request.Text);
-                        message.Notice = "Event text removed from the blacklist. Encounters are being analyzed again.";
-                        message.Reanalyzing = true;
-                        break;
-                }
-
+                var result = edit.Apply(json, current, DateTime.Now);
                 current.Save(storePath);
-                if (message.Reanalyzing)
+                message.Notice = result.Notice;
+                if (result.ChangesScanOptions)
                 {
+                    message.Reanalyzing = true;
                     Reanalyze();
                 }
             }
+            catch (ArgumentException ex)
+            {
+                message.Error = ex.Message;
+            }
             catch (Exception ex)
             {
-                message.Error = ex is ArgumentException ? ex.Message : "Saving the event text failed: " + ex.Message;
-                message.Reanalyzing = false;
-                if (!(ex is ArgumentException))
-                {
-                    ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: event text edit failed");
-                }
+                message.Error = "Saving the encounters data failed: " + ex.Message;
+                ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: encounters data edit failed (" + edit.Type + ")");
             }
 
-            message.Encounters = Store().Encounters;
-            message.Blacklist = Store().Blacklist;
+            message.With(Store());
             post(HostMessages.ToJson(message));
         }
 
         private void Reanalyze()
         {
-            blacklistRules = null;
+            scanOptions = null;
             List<string> ids;
             lock (gate)
             {
@@ -357,15 +330,14 @@ namespace AugurACT.Plugin
             }
         }
 
-        private List<Regex> BlacklistRules() => blacklistRules ??= Store().BlacklistRules();
+        private ScanOptions Options() => scanOptions ??= ScanOptions.From(Store());
 
         private void SendEncounterData()
         {
             var message = new EncounterDataMessage { Path = storePath };
             try
             {
-                message.Encounters = Store().Encounters;
-                message.Blacklist = Store().Blacklist;
+                message.With(Store());
             }
             catch (Exception ex)
             {

@@ -105,6 +105,10 @@ Only if the mechanic is a per-NPC trait worth remembering: add a flag to `NpcRec
 `dataFlag` in its JS file. Flags only turn on, never off. Add a column for it to the encounter and boss/add tables on the
 Encounters data tab. Don't put mechanic counts in the "updated" message; the store is mechanic-neutral.
 
+If the user edits something per encounter (like event texts), see the extension points in
+[Architecture](ARCHITECTURE.md#extension-points): store edits go in `StoreEditSet`, settings that change
+analysis in `ScanOptions`, and page tabs or data sections in `AugurPage.register`.
+
 ## 8. ACT pitfalls already hit
 
 | Problem | Fix |

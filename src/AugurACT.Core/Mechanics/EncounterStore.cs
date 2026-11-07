@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
-using System.Text.RegularExpressions;
 using AugurACT.Core.EventTexts;
 
 namespace AugurACT.Core.Mechanics
@@ -137,84 +136,6 @@ namespace AugurACT.Core.Mechanics
             return result;
         }
 
-        // Adds an event text to a recorded encounter, found by zone and name, or updates the one already listed
-        // under the same text (or under edit.Original, when the text itself was edited). True when it was new.
-        public bool SaveEventText(string? zone, string? name, EventTextEdit edit, DateTime today)
-        {
-            var checkedText = Check(edit.Kind, edit.Text);
-            var encounter = FindByName(zone, name) ?? throw new ArgumentException("That encounter isn't in the encounters data.");
-            if (edit.SetTimer && edit.Timer != null && (!(edit.Timer.Mean > 0) || edit.Timer.Spread < 0))
-            {
-                throw new ArgumentException("A timer needs an interval above 0 s and a ± of 0 s or more.");
-            }
-
-            var record = encounter.EventTexts.FirstOrDefault(t => Same(t.Text, edit.Original ?? checkedText.Text));
-            if (record != null && edit.Original != null && !Same(edit.Original, checkedText.Text)
-                && encounter.EventTexts.Any(t => t != record && Same(t.Text, checkedText.Text)))
-            {
-                throw new ArgumentException("The encounter already lists that text.");
-            }
-
-            var isNew = record == null;
-            if (record == null)
-            {
-                record = new EventTextRecord { Added = today.ToString("yyyy-MM-dd") };
-                encounter.EventTexts.Add(record);
-            }
-
-            record.Kind = checkedText.Kind;
-            record.Text = checkedText.Text;
-            record.Description = string.IsNullOrWhiteSpace(edit.Description) ? null : edit.Description!.Trim();
-            if (edit.SetTimer)
-            {
-                record.Timer = edit.Timer;
-            }
-
-            return isNew;
-        }
-
-        public bool RemoveEventText(string? zone, string? name, string? text)
-        {
-            var encounter = FindByName(zone, name);
-            return encounter != null && encounter.EventTexts.RemoveAll(t => Same(t.Text, text)) > 0;
-        }
-
-        // Blacklists an event text and drops it from every encounter's list. False when it was already listed.
-        public bool AddToBlacklist(string? kind, string? text, DateTime today)
-        {
-            var record = Check(kind, text);
-            foreach (var encounter in Encounters)
-            {
-                encounter.EventTexts.RemoveAll(t => Same(t.Text, record.Text));
-            }
-
-            if (Blacklist.Any(t => Same(t.Text, record.Text)))
-            {
-                return false;
-            }
-
-            record.Added = today.ToString("yyyy-MM-dd");
-            Blacklist.Add(record);
-            return true;
-        }
-
-        public bool RemoveFromBlacklist(string? text) => Blacklist.RemoveAll(t => Same(t.Text, text)) > 0;
-
-        // The blacklist as regexes for EncounterSummary.Build. Entries that no longer parse are skipped.
-        public List<Regex> BlacklistRules()
-        {
-            var rules = new List<Regex>();
-            foreach (var entry in Blacklist)
-            {
-                if (EventTextTemplate.TryParse(entry.Text, out _, out _))
-                {
-                    rules.Add(EventTextTemplate.ToRegex(entry.Text));
-                }
-            }
-
-            return rules;
-        }
-
         public EncounterRecord? FindByName(string? zone, string? name)
         {
             var zoneName = ZoneName(zone);
@@ -222,23 +143,6 @@ namespace AugurACT.Core.Mechanics
                 string.Equals(e.Zone, zoneName, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(e.Name, name?.Trim(), StringComparison.OrdinalIgnoreCase));
         }
-
-        private static EventTextRecord Check(string? kind, string? text)
-        {
-            if (!EventTextKind.IsKnown(kind))
-            {
-                throw new ArgumentException("Unknown event text kind: " + kind);
-            }
-
-            if (!EventTextTemplate.TryParse(text, out _, out var error))
-            {
-                throw new ArgumentException(error);
-            }
-
-            return new EventTextRecord { Kind = kind!, Text = text!.Trim() };
-        }
-
-        private static bool Same(string a, string? b) => string.Equals(a, b?.Trim(), StringComparison.Ordinal);
 
         public EncounterRecord? Find(string? zone, IEnumerable<string> bosses)
         {
@@ -323,75 +227,6 @@ namespace AugurACT.Core.Mechanics
         // Emotes, NPC speech and narration the user picked as this encounter's, as EventTextTemplate texts.
         [DataMember(Name = "eventTexts", Order = 7)]
         public List<EventTextRecord> EventTexts { get; set; } = new List<EventTextRecord>();
-    }
-
-    [DataContract]
-    public sealed class EventTextRecord
-    {
-        // emote, say or narration (EventTextKind).
-        [DataMember(Name = "kind", Order = 0)]
-        public string Kind { get; set; } = "";
-
-        // The text with its variables, like "{player} is marked for death!" (EventTextTemplate).
-        [DataMember(Name = "text", Order = 1)]
-        public string Text { get; set; } = "";
-
-        [DataMember(Name = "added", Order = 2, EmitDefaultValue = false)]
-        public string? Added { get; set; }
-
-        // The user's note on what the text means or what to do about it.
-        [DataMember(Name = "description", Order = 3, EmitDefaultValue = false)]
-        public string? Description { get; set; }
-
-        [DataMember(Name = "timer", Order = 4, EmitDefaultValue = false)]
-        public RecordedTimer? Timer { get; set; }
-    }
-
-    // How often an event text repeats, from the fights it was measured in (EventTextTimer) or typed by hand. The
-    // page combines a new fight's measurement with this one before saving.
-    [DataContract]
-    public sealed class RecordedTimer
-    {
-        // Seconds between events.
-        [DataMember(Name = "mean", Order = 0)]
-        public double Mean { get; set; }
-
-        // ± seconds, covering every interval seen.
-        [DataMember(Name = "spread", Order = 1)]
-        public double Spread { get; set; }
-
-        // How many intervals the mean is from; 0 when typed by hand.
-        [DataMember(Name = "intervals", Order = 2)]
-        public int Intervals { get; set; }
-
-        // Start epochs of the fights measured, so one fight isn't counted twice.
-        [DataMember(Name = "fights", Order = 3)]
-        public List<long> Fights { get; set; } = new List<long>();
-    }
-
-    // A page request to add or update one encounter's event text.
-    [DataContract]
-    public sealed class EventTextEdit
-    {
-        [DataMember(Name = "kind")]
-        public string? Kind { get; set; }
-
-        [DataMember(Name = "text")]
-        public string? Text { get; set; }
-
-        // The entry's text before an edit changed it; null when adding.
-        [DataMember(Name = "original")]
-        public string? Original { get; set; }
-
-        [DataMember(Name = "description")]
-        public string? Description { get; set; }
-
-        // When false the recorded timer is left as it is; when true it becomes Timer, and null removes it.
-        [DataMember(Name = "setTimer")]
-        public bool SetTimer { get; set; }
-
-        [DataMember(Name = "timer")]
-        public RecordedTimer? Timer { get; set; }
     }
 
     // One NPC and what is known about its mechanics. More mechanics will add fields here.

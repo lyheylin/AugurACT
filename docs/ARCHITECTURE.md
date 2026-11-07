@@ -7,8 +7,10 @@ src/AugurACT.Core      netstandard2.0   Log parsing and analysis. No ACT or UI r
 src/AugurACT.Plugin    net48            ACT entry point. Builds AugurACT.dll. Must stay minimal (see below).
 src/AugurACT.Ui        net48            WebView2 host control.
 src/AugurACT.Ui/web                     The page shown in the plugin tab. The CLI inlines it into a standalone page.
-src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel and legend.
-src/AugurACT.Ui/web/eventtexts.js       Event text templates, the add/blacklist dialog, and the data and blacklist lists.
+src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel, section and legend.
+src/AugurACT.Ui/web/page.js             AugurPage: registry for page features (tabs, encounters data sections).
+src/AugurACT.Ui/web/eventtexts          One page feature: format.js (templates, timers), dialog.js, feature.js, css.
+src/AugurACT.Core/EventTexts            Event texts in Core: detector, template format, timer, store edits, requests.
 src/AugurACT.Cli       net10.0          Runs Core over saved log files to tune rules. Runs on Linux/WSL.
 data/boss-mechanics.json                Boss catalog built by the CLI. Holds no player names.
 tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
@@ -31,8 +33,7 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 | `analyze` (id) | `analysis` (the encounter's summary with its barrages and player deaths) |
 | `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
-| `add-event-text`, `remove-event-text` (zone, name, kind, text) | `encounter-data` with a notice |
-| `blacklist-event-text` (kind, text), `unblacklist-event-text` (text) | `encounter-data` with `reanalyzing`; every encounter is analyzed again |
+| Any edit in `StoreEditSet` (today: `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
 
 A newly ended encounter arrives as `encounters` with `replace: false`. After a list, the plugin analyzes every
 encounter in the background, newest first; requests from the page go ahead of that queue. Encounter ids are
@@ -54,6 +55,25 @@ Page   web/timeline.js draws lanes and the axis; web/mechanics/*.js register col
 ```
 
 Adding one is described in [Adding a mechanic](ADDING-A-MECHANIC.md).
+
+## Extension points
+
+Each kind of addition has one place to register, so a feature lives in its own files:
+
+| To add | Core | Page |
+| --- | --- | --- |
+| A mechanic found in the log | An `IMechanicDetector` in `MechanicSet`, a list on `EncounterSummary` | `web/mechanics/<name>.js` + `.css`, `AugurTimeline.register` |
+| A list under the timeline | | `section` on the mechanic |
+| An edit to the encounters data | Data on `EncounterStore`/`EncounterRecord` (and `EncounterDataMessage.With`); a `StoreEdit<T>` per request type, listed in `StoreEditSet` | `AugurPage.ctx.send({ type, ... })` |
+| A user setting that changes analysis | A property on `ScanOptions`, filled in `ScanOptions.From`; read from `ScanContext.Options`; its edits return `changesScanOptions` | |
+| A tab, or a section per recorded encounter | | `AugurPage.register({ tabs, recordSection })` in its own folder under `web/` |
+
+The plugin (`EncounterBridge`) and `app.js` don't change for any of these. Each feature's page files still need a
+`<script>`/`<link>` line in `index.html`; the CLI page inlines whatever it lists.
+
+Event texts use all of them: `EventTextDetector` (mechanic), `EventTextRequests` and `EventTextStore`
+(store edits), `ScanOptions.EventTextBlacklist` (setting), `mechanics/eventtext.js` (timeline and section) and
+`web/eventtexts/` (dialog, Blacklist tab, encounters data list).
 
 ## Design rules
 

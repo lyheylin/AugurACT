@@ -17,12 +17,12 @@ internal static class TextsCommand
             return 1;
         }
 
-        var blacklist = TimelineCommand.Blacklist(data);
+        var options = TimelineCommand.Options(data);
         var timer = Stopwatch.StartNew();
         var results = new ConcurrentBag<TimelinePage.Fight>();
         Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, file =>
         {
-            foreach (var fight in TimelineCommand.Scan(file, blacklist, s => s.EventTexts.Count > 0))
+            foreach (var fight in TimelineCommand.Scan(file, options, s => s.EventTexts.Count > 0))
             {
                 results.Add(fight);
             }

@@ -125,6 +125,12 @@ tr.detail-row > td { padding: 0 0 12px; white-space: normal; background: var(--b
 .lines time { color: var(--muted); margin-right: 8px; }
 .lines time .elapsed { opacity: 0.8; }
 
+/* Sections some mechanics add under the timeline (AugurTimeline "section"). */
+.mech-section { margin-top: 12px; }
+.mech-section > h3 { margin: 0 0 4px; }
+button.link { border: 0; background: transparent; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
+button.link:hover:not(:disabled) { background: transparent; }
+
 /* Encounters data */
 .data-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 4px; }
 #data-filter { font: inherit; padding: 3px 8px; min-width: 260px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }

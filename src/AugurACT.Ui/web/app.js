@@ -1,8 +1,9 @@
 'use strict';
 
-// The page: the encounter list, its expanded detail (timeline, filter, legend, side panels), the update
-// dialog and the encounters data tab. Nothing here is about one mechanic: columns, panels, marks, legend
-// entries and detail text all come from the mechanics registered in web/mechanics/ (AugurTimeline.mechanics).
+// The page: the encounter list, its expanded detail (timeline, filter, legend, side panels, sections), the update
+// dialog and the encounters data tab. Nothing here is about one mechanic or feature: columns, panels, marks,
+// legend entries and detail text come from the mechanics in web/mechanics/ (AugurTimeline.mechanics); extra
+// tabs and encounters data sections come from the features registered with AugurPage (web/page.js).
 //
 // Encounters come from the plugin (ACT's encounter list, each analyzed on request into an EncounterSummary)
 // or, in the page the CLI writes, from an inline "timeline-report" whose fights carry the same summary.
@@ -44,7 +45,8 @@ function send(message) {
   host?.postMessage(message);
 }
 
-window.AugurEventTexts.init({ send, host: !!host, getData: () => encounterData });
+const features = window.AugurPage.features;
+window.AugurPage.ctx = { send, host: !!host, getData: () => encounterData };
 
 // ---- encounter list ----
 
@@ -524,7 +526,7 @@ function renderData() {
       cell.colSpan = headers.length;
       cell.appendChild(npcList('Bosses', record.bosses));
       cell.appendChild(npcList('Adds', record.adds));
-      cell.appendChild(window.AugurEventTexts.recordSection(record));
+      for (const feature of features) if (feature.recordSection) cell.appendChild(feature.recordSection(record));
 
       const setOpen = (open) => {
         detail.hidden = !open;
@@ -580,7 +582,7 @@ function npcList(title, npcs) {
 function onEncounterData(data) {
   encounterData = data;
   renderData();
-  window.AugurEventTexts.renderBlacklist($('blacklist-view'));
+  renderFeatureTabs();
   renderSections();
 
   // The blacklist changed: the plugin analyzes everything again; ask for the open one first.
@@ -615,7 +617,32 @@ $('data-filter').addEventListener('input', renderData);
 
 // ---- tabs ----
 
-const TABS = ['encounters', 'data', 'blacklist'];
+// Encounters and Encounters data are the page's own; features add theirs after them.
+const featureTabs = features.flatMap((f) => f.tabs || []);
+const TABS = ['encounters', 'data', ...featureTabs.map((t) => t.key)];
+
+function buildFeatureTabs() {
+  const nav = document.querySelector('.tabs');
+  let after = $('data-view');
+  for (const tab of featureTabs) {
+    const button = make('button', null, tab.label);
+    Object.assign(button, { type: 'button', id: `tab-${tab.key}` });
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', 'false');
+    button.setAttribute('aria-controls', `${tab.key}-view`);
+    nav.appendChild(button);
+    const view = make('section');
+    Object.assign(view, { id: `${tab.key}-view`, hidden: true });
+    view.setAttribute('role', 'tabpanel');
+    view.setAttribute('aria-labelledby', button.id);
+    after.after(view);
+    after = view;
+  }
+}
+
+function renderFeatureTabs() {
+  for (const tab of featureTabs) tab.render($(`${tab.key}-view`));
+}
 
 function showTab(name) {
   for (const tab of TABS) {
@@ -624,6 +651,7 @@ function showTab(name) {
   }
 }
 
+buildFeatureTabs();
 for (const tab of TABS) $(`tab-${tab}`).addEventListener('click', () => showTab(tab));
 
 // ---- data sources ----
