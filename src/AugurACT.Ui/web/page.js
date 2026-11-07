@@ -10,12 +10,15 @@
 //
 // Features talk to the plugin through AugurPage.ctx, set by app.js before any of this runs:
 // { send(message), host (true inside ACT), getData() (the last "encounter-data" message) }.
+// AugurPage.config holds rules defined in Core (PageConfigMessage): the plugin's "config" message, or the
+// CLI page's report.config.
 // Timeline marks, list columns and side panels are mechanics instead (AugurTimeline.register).
 window.AugurPage = (() => {
   const features = [];
   return {
     features,
     ctx: null,
+    config: null,
     register(feature) {
       features.push(feature);
     },

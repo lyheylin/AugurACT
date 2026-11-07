@@ -6,7 +6,7 @@
 (() => {
   const { make, plural } = window.AugurUtil;
   const {
-    SLOTS, CANDIDATE, escapeLiteral, parse, toRegex, formatTimer, describeRecorded, readSeconds, secondsText,
+    slots, candidate, isAlwaysVariable, escapeLiteral, parse, toRegex, formatTimer, describeRecorded, readSeconds, secondsText,
     mergeTimer, matchRecords, recordedEntry,
   } = window.AugurEventTexts;
   const ctx = () => window.AugurPage.ctx;
@@ -30,7 +30,7 @@
     <p id="text-encounter-hint" class="muted hint"></p>
     <label class="text-field"><span>Text</span><input id="text-input" type="text" spellcheck="false" autocomplete="off"></label>
     <div class="text-row">
-      <p class="muted hint">Variables: {player} {class} {archetype} {number}. Write a literal brace as {{ or }}.</p>
+      <p class="muted hint" id="text-variables"></p>
       <button type="button" id="text-player" title="Select a name in the text, then click this">Selection is a player name</button>
     </div>
     <div id="text-chips" class="et-chips" aria-label="Parts of the text; click one to switch it between fixed text and a variable"></div>
@@ -81,9 +81,9 @@
         continue;
       }
       let at = 0;
-      for (const m of part.text.matchAll(CANDIDATE)) {
+      for (const m of part.text.matchAll(candidate())) {
         if (m.index > at) parts.push({ text: part.text.slice(at, m.index) });
-        const slot = SLOTS.find((s) => m.groups[s] !== undefined);
+        const slot = slots().find((s) => m.groups[s] !== undefined);
         parts.push({ slot, variable: false, value: m[0] });
         at = m.index + m[0].length;
       }
@@ -119,10 +119,10 @@
       }
       const chip = make('button', `et-chip${part.variable ? ' variable' : ''}`, part.variable ? `{${part.slot}}` : part.value);
       chip.type = 'button';
-      const canToggle = part.slot !== 'player' && (part.variable ? part.value != null : true);
+      const canToggle = !isAlwaysVariable(part.slot) && (part.variable ? part.value != null : true);
       chip.disabled = !canToggle;
-      chip.title = part.slot === 'player'
-        ? 'Player names are always variables.'
+      chip.title = isAlwaysVariable(part.slot)
+        ? `{${part.slot}} is always a variable.`
         : part.variable
           ? (part.value != null ? `Click to fix this to "${part.value}".` : 'Typed as a variable; edit the text to change it.')
           : `Click to make this a {${part.slot}} variable.`;
@@ -326,6 +326,7 @@
     holder.innerHTML = MARKUP;
     dialog = holder.firstElementChild;
     document.body.appendChild(dialog);
+    field('text-variables').textContent = `Variables: ${slots().map((s) => `{${s}}`).join(' ')}. Write a literal brace as {{ or }}.`;
 
     field('text-input').addEventListener('input', () => {
       const parsed = partsFromInput(field('text-input').value.trim(), state.parts);

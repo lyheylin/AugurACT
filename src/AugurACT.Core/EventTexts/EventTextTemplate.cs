@@ -11,6 +11,9 @@ namespace AugurACT.Core.EventTexts
     //
     //   {player} attempts to clear {player} of the Void Pox!
     //   Heroic Surge has been triggered by: {archetype}!
+    //
+    // This class is the only definition of the variables. The page gets them from it (EventTextConfig, sent in
+    // the "config" message and written into the CLI's page), so patterns here must also be valid JavaScript.
     public static class EventTextTemplate
     {
         public const string Player = "player";
@@ -99,6 +102,18 @@ namespace AugurACT.Core.EventTexts
 
             return pattern.Append('$').ToString();
         }
+
+        // Parts of a line that could be variables other than player names: a class, an archetype or a number,
+        // as a whole word, in named groups. The detector adds a player group; the page's dialog uses it as it is.
+        public static readonly string CandidatePattern =
+            "(?<![A-Za-z0-9])(?:"
+            + $"(?<{Class}>(?i:{VariablePattern(Class)}))"
+            + $"|(?<{Archetype}>(?i:{VariablePattern(Archetype)}))"
+            + $"|(?<{Number}>{NumberPattern})"
+            + ")(?![A-Za-z0-9])";
+
+        // Player names are variables even when one name was seen; the others only when they vary.
+        public static bool IsAlwaysVariable(string kind) => kind == Player;
 
         public static string VariablePattern(string kind)
         {

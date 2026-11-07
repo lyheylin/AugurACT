@@ -137,14 +137,9 @@ namespace AugurACT.Core.EventTexts
                 .OrderByDescending(p => p.Length)
                 .Select(Regex.Escape)
                 .ToList();
-            var player = names.Count > 0 ? "(?-i:YOU)|" + string.Join("|", names) : "(?-i:YOU)";
-            var pattern = "(?<![A-Za-z0-9])(?:"
-                + $"(?<{EventTextTemplate.Player}>{player})"
-                + $"|(?<{EventTextTemplate.Class}>{EventTextTemplate.VariablePattern(EventTextTemplate.Class)})"
-                + $"|(?<{EventTextTemplate.Archetype}>{EventTextTemplate.VariablePattern(EventTextTemplate.Archetype)})"
-                + $"|(?-i:(?<{EventTextTemplate.Number}>{EventTextTemplate.NumberPattern}))"
-                + ")(?![A-Za-z0-9])";
-            return new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            var player = names.Count > 0 ? "YOU|(?i:" + string.Join("|", names) + ")" : "YOU";
+            var pattern = $"(?<![A-Za-z0-9])(?<{EventTextTemplate.Player}>{player})(?![A-Za-z0-9])|{EventTextTemplate.CandidatePattern}";
+            return new Regex(pattern, RegexOptions.CultureInvariant);
         }
 
         private static Split SplitLine(Regex tokens, string text)
@@ -226,7 +221,7 @@ namespace AugurACT.Core.EventTexts
 
                     var index = slot++;
                     var seen = occurrences.Select(o => o.Values[index]).Distinct(StringComparer.Ordinal).ToList();
-                    var variable = part.Slot == EventTextTemplate.Player || seen.Count > 1;
+                    var variable = EventTextTemplate.IsAlwaysVariable(part.Slot) || seen.Count > 1;
                     group.Parts.Add(new EventTextPart { Slot = part.Slot, Values = seen, Variable = variable });
                     template.Append(variable ? EventTextTemplate.Placeholder(part.Slot) : EventTextTemplate.Escape(seen[0]));
                 }

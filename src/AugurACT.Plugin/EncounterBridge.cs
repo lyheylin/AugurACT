@@ -47,6 +47,10 @@ namespace AugurACT.Plugin
             switch (request?.Type)
             {
                 case HostMessages.Ready:
+                    post(HostMessages.ToJson(new PageConfigMessage()));
+                    SendList();
+                    Enqueue(SendEncounterData, urgent: true);
+                    break;
                 case HostMessages.List:
                     SendList();
                     Enqueue(SendEncounterData, urgent: true);

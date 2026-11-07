@@ -29,7 +29,8 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 
 | From page | Plugin answers with |
 | --- | --- |
-| `ready`, `list` | `encounters` (the whole list, newest first) and `encounter-data` |
+| `ready` | `config` (rules defined in Core that the page needs, like event text variables), then as for `list` |
+| `list` | `encounters` (the whole list, newest first) and `encounter-data` |
 | `analyze` (id) | `analysis` (the encounter's summary with its barrages and player deaths) |
 | `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
@@ -67,6 +68,7 @@ Each kind of addition has one place to register, so a feature lives in its own f
 | An edit to the encounters data | Data on `EncounterStore`/`EncounterRecord` (and `EncounterDataMessage.With`); a `StoreEdit<T>` per request type, listed in `StoreEditSet` | `AugurPage.ctx.send({ type, ... })` |
 | A user setting that changes analysis | A property on `ScanOptions`, filled in `ScanOptions.From`; read from `ScanContext.Options`; its edits return `changesScanOptions` | |
 | A tab, or a section per recorded encounter | | `AugurPage.register({ tabs, recordSection })` in its own folder under `web/` |
+| Rules the page must apply the same way as Core | A field on `PageConfigMessage`, built from the Core definition | Read `AugurPage.config`; never copy the rule into JS |
 
 The plugin (`EncounterBridge`) and `app.js` don't change for any of these. Each feature's page files still need a
 `<script>`/`<link>` line in `index.html`; the CLI page inlines whatever it lists.

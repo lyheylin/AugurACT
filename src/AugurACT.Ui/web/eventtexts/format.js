@@ -4,26 +4,32 @@
 // format, timers, and which recorded encounter a fight belongs to. No DOM state here.
 //
 // A template is the text with variables written as {player}, {class}, {archetype} or {number}, and a literal
-// brace doubled. It must read the same as EventTextTemplate in Core, which uses it to apply the blacklist.
+// brace doubled. The variables and their patterns come from Core (EventTextTemplate, sent as the "config"
+// message and written into the CLI's page as report.config), so they are defined in one place only.
 window.AugurEventTexts = (() => {
   const { make, plural, clock } = window.AugurUtil;
 
   const KINDS = { emote: 'Emote', say: 'NPC say', narration: 'Narration' };
-  const SLOTS = ['player', 'class', 'archetype', 'number'];
-  const ARCHETYPES = ['Fighter', 'Priest', 'Scout', 'Mage'];
-  const CLASSES = [
-    'Guardian', 'Berserker', 'Monk', 'Bruiser', 'Shadowknight', 'Paladin',
-    'Templar', 'Inquisitor', 'Warden', 'Fury', 'Mystic', 'Defiler', 'Channeler',
-    'Swashbuckler', 'Brigand', 'Troubadour', 'Dirge', 'Ranger', 'Assassin', 'Beastlord',
-    'Wizard', 'Warlock', 'Illusionist', 'Coercer', 'Conjuror', 'Necromancer',
-  ];
-  const NUMBER = '\\d+(?:[.,]\\d+)*[KMBTQ]?';
-  const PATTERNS = { player: '[A-Za-z]+', number: NUMBER, class: CLASSES.join('|'), archetype: ARCHETYPES.join('|') };
 
-  // Parts of plain text that could be variables. Player names can't be told from other words here; the user
-  // marks them, or they come from the encounter's player list.
-  const CANDIDATE = new RegExp(
-    `(?<![A-Za-z0-9])(?:(?<class>${PATTERNS.class})|(?<archetype>${PATTERNS.archetype})|(?<number>${NUMBER}))(?![A-Za-z0-9])`, 'gi');
+  // From Core, read on first use (the config arrives before anything that needs it).
+  let rules = null;
+  function config() {
+    const sent = window.AugurPage.config?.eventTexts;
+    if (!rules && sent) {
+      rules = {
+        slots: sent.variables.map((v) => v.name),
+        patterns: Object.fromEntries(sent.variables.map((v) => [v.name, v.pattern])),
+        always: new Set(sent.variables.filter((v) => v.always).map((v) => v.name)),
+        // Classes, archetypes and numbers in plain text, as named groups. Player names can't be told from
+        // other words here; the user marks them, or they come from the encounter's player list.
+        candidate: new RegExp(sent.candidate, 'g'),
+      };
+    }
+    return rules || { slots: [], patterns: {}, always: new Set(), candidate: /(?!)/g };
+  }
+  const isAlwaysVariable = (slot) => config().always.has(slot);
+  const slots = () => config().slots;
+  const candidate = () => config().candidate;
 
 
   // ---- template format ----
@@ -43,8 +49,8 @@ window.AugurEventTexts = (() => {
       literal += template.slice(at, m.index);
       at = token.lastIndex;
       if (m[0] === '{{' || m[0] === '}}') { literal += m[0][0]; continue; }
-      if (!SLOTS.includes(m[1])) {
-        return { error: m[0].length === 1 ? 'A single { or } must be doubled, as {{ or }}.' : `Unknown variable ${m[0]}. Use {player}, {class}, {archetype} or {number}.` };
+      if (!slots().includes(m[1])) {
+        return { error: m[0].length === 1 ? 'A single { or } must be doubled, as {{ or }}.' : `Unknown variable ${m[0]}. Use ${slots().map((s) => `{${s}}`).join(', ')}.` };
       }
       if (literal) parts.push({ text: literal });
       literal = '';
@@ -59,7 +65,7 @@ window.AugurEventTexts = (() => {
   function toRegex(template) {
     const parsed = parse(template);
     if (parsed.error) return null;
-    return new RegExp(`^${parsed.parts.map((p) => (p.slot ? `(${PATTERNS[p.slot]})` : escapeRegex(p.text))).join('')}$`, 'i');
+    return new RegExp(`^${parsed.parts.map((p) => (p.slot ? `(${config().patterns[p.slot]})` : escapeRegex(p.text))).join('')}$`, 'i');
   }
 
   // The template drawn with its variables as chips.
@@ -151,7 +157,7 @@ window.AugurEventTexts = (() => {
   }
 
   return {
-    KINDS, SLOTS, CANDIDATE, escapeLiteral, parse, toRegex, render, kindTag,
+    KINDS, slots, candidate, isAlwaysVariable, escapeLiteral, parse, toRegex, render, kindTag,
     formatTimer, describeRecorded, readSeconds, secondsText, mergeTimer, matchRecords, recordedEntry,
   };
 })();

@@ -699,7 +699,8 @@ if (host) {
 
   host.addEventListener('message', (event) => {
     const data = event.data;
-    if (data.type === 'encounters') onEncounters(data);
+    if (data.type === 'config') window.AugurPage.config = data;
+    else if (data.type === 'encounters') onEncounters(data);
     else if (data.type === 'analysis') onAnalysis(data);
     else if (data.type === 'encounter-npcs') onEncounterNpcs(data);
     else if (data.type === 'encounter-data') onEncounterData(data);
@@ -711,6 +712,7 @@ if (host) {
 const inline = document.getElementById('augur-data');
 if (inline) {
   const report = JSON.parse(inline.textContent);
+  window.AugurPage.config = report.config;
   $('page-title').textContent = report.title || 'AugurACT';
   document.title = report.title || 'AugurACT';
   const list = report.fights.map((f, i) => {

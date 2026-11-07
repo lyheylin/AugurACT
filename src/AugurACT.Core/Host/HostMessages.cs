@@ -67,6 +67,18 @@ namespace AugurACT.Core.Host
         public List<string>? Bosses { get; set; }
     }
 
+    // Rules the page needs from Core, sent once when the page starts (and written into the CLI's page), so the
+    // page never keeps its own copy. A feature with such rules adds a field here.
+    [DataContract]
+    public sealed class PageConfigMessage
+    {
+        [DataMember(Name = "type", Order = 0)]
+        public string Type { get; private set; } = "config";
+
+        [DataMember(Name = "eventTexts", Order = 1)]
+        public EventTextConfig EventTexts { get; set; } = EventTextConfig.Create();
+    }
+
     // One ACT encounter, without its analysis.
     [DataContract]
     public sealed class EncounterInfo

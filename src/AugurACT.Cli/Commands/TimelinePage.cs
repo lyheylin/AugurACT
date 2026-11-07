@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AugurACT.Core.Encounters;
+using AugurACT.Core.Host;
 
 namespace AugurACT.Cli.Commands;
 
@@ -42,7 +43,9 @@ internal static class TimelinePage
     private static string Data(string title, List<Fight> fights)
     {
         var json = new StringBuilder();
-        json.Append("{\"type\":\"timeline-report\",\"title\":").Append(JsonSerializer.Serialize(title)).Append(",\"fights\":[");
+        json.Append("{\"type\":\"timeline-report\",\"title\":").Append(JsonSerializer.Serialize(title))
+            .Append(",\"config\":").Append(HostMessages.ToJson(new PageConfigMessage()))
+            .Append(",\"fights\":[");
         for (var i = 0; i < fights.Count; i++)
         {
             var f = fights[i];

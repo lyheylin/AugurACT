@@ -138,8 +138,11 @@ code (`Repaired: \aITEM ...:\#f0c0a0Ring\/a`), so links are removed before looki
 now ready for use!") and system text look exactly like encounter narration. The user blacklists them. Nothing is
 blacklisted by default.
 
-**Templates become regexes** (`EventTextTemplate.ToRegex`, and `toRegex` in `web/eventtexts/format.js`, which must stay
-the same): literal text escaped, each variable a capture group, the whole line anchored, case ignored. The
+**Templates become regexes** (`EventTextTemplate.ToRegex`): literal text escaped, each variable a capture group,
+the whole line anchored, case ignored. **The variables are defined only in `EventTextTemplate`.** The page gets
+their names, patterns and the "could be a variable" pattern from Core (`EventTextConfig`, in the `config`
+message, or `report.config` in the CLI's page) and builds the same regexes from them, so patterns there must be
+valid in both .NET and JavaScript (inline `(?i:...)` groups are fine in both). The
 blacklist uses them now; trigger generation is meant to use them later.
 
 **Timers.** A group that repeats on a steady timer shows how often: "every 3:40 ± 13 s" (`EventTextTimer`).

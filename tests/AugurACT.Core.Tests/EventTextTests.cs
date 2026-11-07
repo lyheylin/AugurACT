@@ -290,3 +290,27 @@ public class EventTextTests
         }
     }
 }
+
+public class EventTextConfigTests
+{
+    [Fact]
+    public void ThePageGetsEveryVariableFromCore()
+    {
+        var config = AugurACT.Core.EventTexts.EventTextConfig.Create();
+
+        Assert.Equal(AugurACT.Core.EventTexts.EventTextTemplate.SlotKinds, config.Variables.Select(v => v.Name));
+        Assert.Equal(new[] { "player" }, config.Variables.Where(v => v.Always).Select(v => v.Name));
+        Assert.Contains("\"type\":\"config\"", AugurACT.Core.Host.HostMessages.ToJson(new AugurACT.Core.Host.PageConfigMessage()));
+    }
+
+    [Theory]
+    [InlineData("Called by Mage and FURY for 20 seconds", "archetype:Mage class:FURY number:20")]
+    [InlineData("Stand 10m away, 1.2B damage", "number:1.2B")]
+    [InlineData("Magespell and Furyous", "")]
+    public void TheCandidatePatternFindsClassesArchetypesAndNumbers(string text, string expected)
+    {
+        var rule = new System.Text.RegularExpressions.Regex(AugurACT.Core.EventTexts.EventTextConfig.Create().Candidate);
+        var found = rule.Matches(text).Select(m => new[] { "class", "archetype", "number" }.First(g => m.Groups[g].Success) + ":" + m.Value);
+        Assert.Equal(expected, string.Join(" ", found));
+    }
+}
