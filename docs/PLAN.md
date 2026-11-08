@@ -46,35 +46,22 @@ Turn raw lines into typed events: damage, heal, ward, kill, cure, interrupt, NPC
       coverage, since most are player flavor text.
 - [ ] Check the rules against other bosses and logs.
 
-### First mechanic: barrage and bulwark (done)
+### First mechanics (done)
 
-Built end to end ahead of the phases below, to test the approach on a mechanic common to many fights. See
-[Mechanics](MECHANICS.md).
+Barrage and bulwark, then player deaths, were built end to end ahead of the phases below to test the approach.
+See [Mechanics](MECHANICS.md) for how they're detected.
 
-- [x] Detect warning, release and cancel, and the bulwarks pressed for each one.
-- [x] Decide blocked or missed from barrage damage, which works for raids and groups.
-- [x] Check against 43 logs from three characters: 1,625 casts from 35 bosses.
-- [x] Show casts on a timeline in the plugin tab, and in a page the CLI writes from saved logs.
-- [x] Keep a boss catalog in `data/boss-mechanics.json`, built from logs and safe to commit.
-- [x] `EncounterData.LogLines` includes the emote and bulwark lines: ACT keeps every game line (user, Nov 3).
-- [x] Unresolved warnings: the boss sometimes doesn't release. Shown as "No release".
-- [x] Bosses with no barrage damage line: a blocked barrage can do no damage at all, so no damage means
-      blocked.
-
-### Plugin: ACT encounters with barrages
+### Plugin: ACT encounters
 
 - [x] List ACT's own encounters (`ZoneList`), including fights from before the plugin was enabled, and add
       new ones as they end.
-- [x] Analyze them on one background thread, newest first, so the list fills in barrage counts. A click
-      jumps the queue.
-- [x] Click an encounter to expand its barrage timeline underneath, with a folding "Barrages" panel on the
-      right: barrages, blocked, missed, no release (and cancelled when there are any).
+- [x] Analyze them on one background thread, newest first, so the list fills in as it goes. A click jumps
+      the queue.
+- [x] Click an encounter to expand its timeline underneath, with a folding panel per mechanic on the right.
 - [x] "Update encounters data" per fight: the user confirms the main NPC(s), defaulting to the one ACT named
       the fight after. Zone plus main NPCs is the encounter; the rest are its adds. Stored in ACT's
       `Config\AugurACT.encounters.json`; shown on the "Encounters data" tab, by zone.
-- [x] Player deaths: a Deaths column, a lane per player who died on the timeline, and a "Deaths" panel with
-      counts per character.
-- [x] A filter under the timeline with one switch per mechanic (Barrage, Death), and a legend below it.
+- [x] A filter under the timeline with one switch per mechanic, and a legend below it.
 - [x] A lane for every player in the encounter, from ACT's ally list, whether or not anything happened to them.
 - [x] Mechanics are self-contained: a Core detector registered in `MechanicSet`, and a JS and CSS file in
       `web/mechanics/` (see Adding a mechanic).
@@ -100,11 +87,13 @@ Identify the boss and split logs into pulls, using NPC instance IDs, zone change
 ### Phase 4: Interactive timeline
 
 - Choose a library, with vis-timeline and D3 as the candidates. Bundle it with the plugin; don't use a CDN.
-  The barrage timeline is plain SVG for now, which may be enough.
+  The timeline is plain SVG for now, which may be enough.
 - One lane per ability or event type, with zoom, pan, and click-through to source log lines.
 - Send aggregated data to the page. A long raid fight is far too many lines to render individually.
 
 ### Phase 5: Trigger generation
+
+Started: event texts already get ACT triggers (see the plugin section above).
 
 - Generate a regex from a chosen event, replacing variable parts (player names, numbers) with capture groups.
 - **Test each regex against stored logs** and show hits and false positives before offering it.
@@ -123,11 +112,10 @@ lines for what ACT doesn't capture, such as NPC emotes and speech.
 
 ## Next steps
 
-Common mechanics come first, each built the same way as barrage (see [Adding a mechanic](ADDING-A-MECHANIC.md)),
-then encounter-specific ones.
+Common mechanics come first, then encounter-specific ones, each built as described in
+[Adding a mechanic](ADDING-A-MECHANIC.md).
 
-1. Identify specific logs and encounters to use as references, with their known mechanics. Barrage and
-   bulwark is done; the Oct 12 Peris K'dal group fight is a reference for group misses.
+1. Identify specific logs and encounters to use as references, with their known mechanics.
 2. List common patterns seen in those fights that rules can target.
 
 ## Verify in ACT
@@ -144,7 +132,7 @@ These can't be checked without running inside ACT:
 - [ ] The encounter list matches ACT's, without each zone's merged "All" entry, and Refresh picks up imports
       and ACT's "clear" correctly.
 - [ ] Background analysis of a long raid night keeps ACT responsive.
-- [ ] Barrage counts in the list match the CLI for the same fight.
+- [ ] Mechanic counts in the list match the CLI for the same fight.
 - [ ] Death counts match ACT's Deaths column, apart from "pain and suffering" deaths, which ACT leaves out.
 - [ ] ACT's ally list holds every player in the fight (it gives the player lanes and decides whose deaths
       count), and no NPCs.
