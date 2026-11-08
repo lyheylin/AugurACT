@@ -1,34 +1,32 @@
 # Adding a mechanic
 
 How to take a boss mechanic from "players know it exists" to "the plugin shows it per encounter and records
-it per NPC". Barrage and bulwark was the first one done this way; each step names the barrage code to copy.
+it per NPC". Barrage (`BarrageDetector`, `mechanics/barrage.js`) is the reference implementation to copy.
 
 ## 1. Find it in real logs
 
 - **Ask the user for the shape of the mechanic and a known example**, including a known failure. Their
-  examples (like the Oct 12 Peris K'dal group misses) save hours of searching, and failures are rare.
-- **Learn the game rules the log can't show.** For barrage: zone tags tell raid from group, and a raid
-  bulwark only covers the caster's group. Record these in [Mechanics](MECHANICS.md) and in memory.
+  examples save hours of searching, and failures are rare.
+- **Learn the game rules the log can't show**, such as raid versus group differences. Record these in
+  [Mechanics](MECHANICS.md) and in memory.
 - **Prefilter the archive first.** The logs are tens of GB. Grep each file down to the lines the mechanic
-  could involve, keeping the `eq2log_<Character>` file names (the CLI reads the logger's name from them), and
-  run everything else on the filtered copies. Anything that needs the player list (`deaths`, `timeline`) must
-  run on full logs, because the roster reads every line for ability use. The full barrage run took 97 s on 12 GB; filtered it took 0.3 s.
-  Keep the zone line (`] You have entered `) in the filter.
-- **Write down the line sequence** for each content type, with exact text: warning emote, coloured text,
-  player response, release, damage, cancel. Raid and group versions usually differ.
+  could involve, keeping the `eq2log_<Character>` file names (the CLI reads the logger's name from them) and
+  the zone line (`] You have entered `), and run everything else on the filtered copies. Anything that needs
+  the player list (`timeline`) must run on full logs, because the roster reads every line for ability use.
+- **Write down the line sequence** for each content type, with exact text: warning, player response, effect,
+  cancel. Raid and group versions usually differ.
 
 ## 2. Decide the outcome from the effect, not the response
 
-- **The logger only sees their own group's responses.** A raid barrage blocked by another group shows no
-  bulwark at all. Judge success by what the mechanic did (who took damage) and keep the responses as evidence.
+- **The logger only sees their own group's responses.** Judge success by what the mechanic did (who took
+  damage) and keep the responses as evidence.
 - **Check the rule against the counter-cases** before trusting it: successes with no visible response, and
-  failures despite one. For barrage, 67 raid blocks had no bulwark in our group and 29 misses had one.
-- **Check how often the "failure signal" happens anyway.** Flurries looked like a raid miss signal until the
-  baseline showed them in 7 to 16% of all seconds.
-- **No damage can mean success.** Some blocked barrages log nothing at all.
-- **Keep "no outcome" as an outcome.** Bosses sometimes warn and never release; that's "No release", not a
+  failures despite one.
+- **Check how often the "failure signal" happens anyway**, as a baseline across the whole fight.
+- **No effect can mean success.** Some successes log nothing at all.
+- **Keep "no outcome" as an outcome.** A boss can warn and never follow through; that's a result, not a
   detection bug.
-- Confirm odd cases with the user rather than inventing rules. They settled three open questions in one reply.
+- Confirm odd cases with the user rather than inventing rules.
 
 ## 3. Detector in Core
 
@@ -51,10 +49,10 @@ Then register it, in two places in Core and nowhere else:
 
 The plugin and the CLI `timeline` command then run it with no changes.
 
-Rules that held for barrage:
+Rules that have held so far:
 
 - Match the boss by its **exact NPC name prefix**. Names hold apostrophes and commas
-  (`Mo'iana the Ravenous' Barrage`, `Evuntressa, Kryterion's Behest`), which the generic parser splits wrongly.
+  (`Evuntressa, Kryterion's Behest`), which the generic parser splits wrongly.
 - Targets in emotes are upper case: compare without case. `YOU` is the logger.
 - Keep the source lines on each result (stripped of markup), so the page can show why a verdict was made.
 - Add a `ContentKind` aware variant if raid and group differ.
@@ -71,9 +69,9 @@ when the detector needs the roster (see `DeathDetectorTests.cs`).
 - `timeline <logs> --html page.html` writes the plugin's page as a standalone file, with every fight that has
   a mechanic in it. It runs all registered mechanics, so a new one needs nothing here. The page holds player
   names: never commit or share it (`.gitignore` covers `*timeline*.html`).
-- For tuning, add a subcommand of your own like `barrage` or `deaths` (`src/AugurACT.Cli/Commands/`) that prints
-  what the rule found across many logs. `barrage --catalog` adds to `data/boss-mechanics.json` (no player
-  names, safe to commit; casts de-duplicated by time so two characters' logs of one fight count once).
+- For tuning, add a subcommand of your own (`src/AugurACT.Cli/Commands/`) that prints what the rule found
+  across many logs. Anything it writes to `data/` must hold no player names, and should de-duplicate by time so
+  two characters' logs of one fight count once.
 
 ## 6. Plugin page
 

@@ -4,12 +4,9 @@ An [Advanced Combat Tracker](https://advancedcombattracker.com/) plugin for Ever
 parsed encounters to find key events and boss behavior patterns, shows them on an interactive timeline,
 and produces trigger regexes.
 
-**Status:** early. The first mechanic, barrage and bulwark, is detected end to end. The plugin tab lists
-ACT's encounters with their barrage counts; click one for its barrage timeline. "Update encounters data"
-records a fight under its zone and main NPCs, with its adds and which of them release barrages. Each fight
-also lists its emotes, NPC speech and narration, grouped by text with variables like `{player}`; these can be
-added to a recorded encounter's event texts, or blacklisted, and given ACT triggers whose regexes match the
-line as the game wrote it (copy as ACT's XML, or import straight into ACT). Other analysis is not built yet. See [the plan](docs/PLAN.md).
+**Status:** early. The plugin tab lists ACT's encounters; click one for its timeline. A fight's emotes, NPC
+speech and narration are grouped by text, with variables like `{player}`, and can be saved to the encounter,
+blacklisted, or turned into ACT triggers. See [the plan](docs/PLAN.md) for what's done and what's next.
 
 ## Requirements
 
@@ -27,38 +24,6 @@ dotnet test
 
 Builds and tests work from WSL or Windows. Tests cover `AugurACT.Core` only and need no ACT install.
 
-## Analyze a saved log
-
-```sh
-dotnet run --project src/AugurACT.Cli -- summary "/path/to/eq2log_Character.txt"
-```
-
-This prints counts per event type, NPCs with speech or emotes, and the most common unrecognized lines.
-
-```sh
-dotnet run --project src/AugurACT.Cli -- timeline "/path/to/logs/" --since 2026-10-01 --html encounter-timeline.html
-```
-
-This cuts the logs into fights the way ACT does and writes the plugin's page as a file that opens from disk,
-with every fight that had a mechanic in it. The page contains player names, so keep it out of the repository.
-
-```sh
-dotnet run --project src/AugurACT.Cli -- barrage "/path/to/logs/" --since 2026-09-03 --catalog data/boss-mechanics.json
-dotnet run --project src/AugurACT.Cli -- deaths "/path/to/logs/" --since 2026-10-01
-```
-
-```sh
-dotnet run --project src/AugurACT.Cli -- texts "/path/to/logs/" --data AugurACT.encounters.json
-```
-
-This lists each fight's event texts (emotes, NPC speech and narration), grouped with their variables, leaving
-out what the encounters data file blacklists. `timeline` takes `--data` too. The output holds player names.
-
-`barrage` and `deaths` check one mechanic's rules across many logs. `barrage` prints, per boss, how many barrages were blocked,
-missed or cancelled, the warning time and how often it comes; `--catalog` adds new casts to the boss catalog,
-skipping any already recorded. `deaths` lists player deaths per log and per character, with their most common
-killers.
-
 ## Install in ACT
 
 ACT needs a Windows path, so copy the build output somewhere Windows can reach. Setting `AugurDeployDir` in
@@ -69,14 +34,40 @@ dependency DLLs.
    `%APPDATA%\Advanced Combat Tracker\Plugins\AugurACT\`.
 2. In ACT, open **Plugins**, browse to `AugurACT.dll`, then choose **Add/Enable Plugin**.
 
+## Use the plugin
+
+- **Encounters:** the tab lists ACT's encounters. Select one to see its timeline.
+- **Update encounters data:** records the fight under its zone and main NPCs, with its adds.
+- **Event texts:** each fight's emotes, NPC speech and narration, grouped by text. Add them to the recorded
+  encounter, or blacklist them.
+- **Triggers:** give an event text an ACT trigger whose regex matches the line as the game wrote it. Copy it
+  as ACT's XML, or import it straight into ACT.
+
+## Analyze saved logs
+
+The CLI runs the same analysis over saved log files, so rules can be tuned without launching ACT or the game.
+
+```sh
+dotnet run --project src/AugurACT.Cli -- timeline "/path/to/logs/" --since 2026-10-01 --html encounter-timeline.html
+dotnet run --project src/AugurACT.Cli -- texts "/path/to/logs/" --data AugurACT.encounters.json
+dotnet run --project src/AugurACT.Cli -- summary "/path/to/eq2log_Character.txt"
+```
+
+- `timeline` cuts the logs into fights the way ACT does and writes the plugin's page as a file that opens
+  from disk.
+- `texts` lists each fight's event texts with their variables.
+- `summary` prints counts per event type, NPCs with speech or emotes, and the most common unrecognized lines.
+
+`timeline` and `texts` take `--data` to leave out what the encounters data file blacklists. Their output holds
+player names, so keep it out of the repository.
+
 ## Documentation
 
 - [Plan](docs/PLAN.md): goals, phases and open questions
 - [Architecture](docs/ARCHITECTURE.md): project layout and design constraints
 - [EQ2 log format](docs/EQ2-LOG-FORMAT.md): what real logs contain
 - [Mechanics](docs/MECHANICS.md): boss mechanics AugurACT recognizes, and how
-- [Adding a mechanic](docs/ADDING-A-MECHANIC.md): the steps and pitfalls, learned from barrage
-- [Boss catalog](data/boss-mechanics.json): which bosses have which mechanics
+- [Adding a mechanic](docs/ADDING-A-MECHANIC.md): the steps and pitfalls
 
 ## Logs and privacy
 
