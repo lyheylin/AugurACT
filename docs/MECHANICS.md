@@ -116,7 +116,7 @@ the log, so `EventTextDetector` tells them apart by shape:
 | --- | --- |
 | Emote | `\aNPC <id> Boss:Boss\/a readies a barrage!` |
 | NPC say | `\aNPC <id> Boss:Boss\/a says, "..."` (also shouts, yells, whispers, tells) |
-| Narration | A colour code outside any link, on a line that isn't player chat: `\#00FFFFThresinet targets Tesla for Flesh Decay!` |
+| Narration | A colour code outside any link, on a line that isn't player chat: `\#00FFFFThresinet targets Tanka for Flesh Decay!` |
 
 Lines starting with an NPC link followed by `'s` are combat lines, not emotes. Item links carry their own colour
 code (`Repaired: \aITEM ...:\#f0c0a0Ring\/a`), so links are removed before looking for one.
@@ -125,13 +125,13 @@ code (`Repaired: \aITEM ...:\#f0c0a0Ring\/a`), so links are removed before looki
 (`EventTextTemplate`): `{player}`, `{class}`, `{archetype}` and `{number}`, with a literal brace doubled.
 
 - **Player names are always variables.** They come from the encounter's player list (ACT's allies, or the
-  roster in the CLI), matched as whole words in any case (`TROLLISHUS`), plus `YOU` in capitals.
+  roster in the CLI), matched as whole words in any case (`TANKA`), plus `YOU` in capitals.
 - **Classes, archetypes and numbers** (`MAGE`, `20`, `1.2B`) become variables only when more than one value was
   seen in the encounter; otherwise they stay as text. The dialog lets the user switch any of them.
 - **Each class or archetype in a list is its own variable**, and values never hold commas. Heroic Surge names
   one, two or three archetypes, so it makes a group per count (`{archetype}!`, `{archetype}, {archetype}!`, and
   `FIGHTER, PRIEST, SCOUT!` when only that one was seen), each blacklisted on its own.
-- Charmed players speak as NPCs (`\aNPC 277422 Tesla:Tesla\/a says, "Your blood calls to me."`); those go in the
+- Charmed players speak as NPCs (`\aNPC 277422 Tanka:Tanka\/a says, "Your blood calls to me."`); those go in the
   player's own lane, with the name as `{player}`.
 
 **Not filtered out on purpose:** player-triggered narration (Heroic Surge), ability-ready notices ("Time Warp is
@@ -143,7 +143,30 @@ the whole line anchored, case ignored. **The variables are defined only in `Even
 their names, patterns and the "could be a variable" pattern from Core (`EventTextConfig`, in the `config`
 message, or `report.config` in the CLI's page) and builds the same regexes from them, so patterns there must be
 valid in both .NET and JavaScript (inline `(?i:...)` groups are fine in both). The
-blacklist uses them now; trigger generation is meant to use them later.
+blacklist and trigger regexes use them.
+
+**Trigger regexes** (`TriggerRegex`) differ from those: ACT matches a trigger against the line as the game wrote
+it, so markup must be in place. Each occurrence keeps its line (`raw`), and the regex is built from one:
+
+| Line | Regex |
+| --- | --- |
+| `\aNPC 7273717 A ghouly bladegaze:A ghouly bladegaze\/a is summoned ...!` | `A ghouly bladegaze\\/a is summoned ...!` |
+| `\#00FF00Thresinet targets Tanka for Flesh Decay!` | `\\#00FF00Thresinet targets (?<player>[A-Za-z]+) for Flesh Decay!` |
+
+- The NPC link at the start is dropped up to the name, since its id changes per spawn; a link later in the line
+  keeps `\\aPC -?\d+ [^\\]*?:` for it. Colour codes stay as written, also mid-line (Heroic Surge).
+- Each variable is a named group, numbered from the second of a kind (`player`, `player2`), so TTS can say
+  `${player}`. Only regex characters are escaped; spaces and `#` stay readable.
+- No anchors: ACT's line starts with the time stamp.
+- **The YOU group.** In the trigger dialog, any `player` group (or several) can be checked and swapped to
+  `(?<YOU>...)`, and back; TTS `${player}` follows the rename. ACT (since 3.2.1.251; `ParseCustomSingle`) drops
+  a match unless the YOU group's text contains the logging character's name, ignoring case, so the trigger
+  fires only for you. The literal word `YOU` in a line doesn't count. With two YOU groups ACT checks the value
+  .NET reports for that name, the last one captured.
+- A text typed by hand has no line. Its regex is built from the text, with the link end after the longest
+  boss or add name the encounter lists; narration then has no colour codes. The dialog says so.
+- `AugurACT.Cli texts` prints each group's regex and flags any of its own lines it misses. On the Nov 8 log all
+  469 groups matched every line.
 
 **Timers.** A group that repeats on a steady timer shows how often: "every 3:40 ± 13 s" (`EventTextTimer`).
 
@@ -154,7 +177,7 @@ blacklist uses them now; trigger generation is meant to use them later.
 4. The interval shown is the mean; the ± is the largest distance of any interval from it, so it covers every
    interval seen.
 
-How 0.15 was picked, from three logs (Olvorlec Nov 7, Akatsukifish Oct 31 and Nov 7), 101 groups with 4+ events:
+How 0.15 was picked, from three raid logs (Oct 31 and two of Nov 7), 101 groups with 4+ events:
 
 | Variation | Groups | Examples |
 | --- | --- | --- |
@@ -166,6 +189,10 @@ How 0.15 was picked, from three logs (Olvorlec Nov 7, Akatsukifish Oct 31 and No
 Still to tune: a single missed line or a phase where the boss stops doubles one interval and fails the test;
 and short bursts with 1-second timestamps (lines 3-4 s apart) can pass as timers. Check
 `AugurACT.Cli texts`, which prints every group's variation, before changing the value.
+
+**Players named.** Each line keeps the players its `{player}` values name (`players`), as the player lanes
+are named: `YOU` is the logger and `ARCHERSS` is Archerss. The timeline drops a line from the event's mark to
+each of their lanes, ending in a dot: faint and dotted, solid while its text is selected.
 
 **Remove** takes a group off one fight's list and timeline while the page is open, without blacklisting it.
 "Show again" under the list brings them back.
@@ -196,6 +223,16 @@ Separate from the catalog above, the plugin keeps the user's own record of encou
   fight (by start time) is counted once. Unticked, a recorded timer stays as it was. A timer can also be typed
   (seconds or m:ss); typed values count as typed by hand (no intervals). Editing an entry and unticking the
   timer removes it.
+- **Triggers** (`triggers` under an event text: regex, sound, soundData, category, restrictToZone, timer,
+  timerName, resultsTab). "Trigger +" on a text in either list opens a dialog with the regex filled in and
+  checked against the fight's lines (or the saved `line`); sound is none or TTS; "Add zone" fills the category
+  with the encounter's zone. From a fight's list it saves into the recorded encounter, adding the text if it
+  isn't listed yet. Each text also saves a `line` from the fight it came from, and the `regex` a new trigger
+  starts from (rebuilt on load). ACT tells triggers apart by regex and category, so saving one with both the
+  same replaces it. Under each text, every trigger has **Copy** (ACT's share XML on the clipboard, a backslash
+  written `&#92;` as ACT does: `<Trigger R="A ghouly bladegaze&#92;&#92;/a is ..." SD="Scout add" ST="3" CR="T"
+  C="..." T="F" TN="" Ta="F" />`), **Import** (straight into ACT's custom triggers, replacing one with the same
+  regex and category) and **Remove**.
 - **The blacklist** (`eventTextBlacklist`, in the same file) holds templates never to list. Blacklisting a text
   also removes it from every encounter's list. Summaries leave blacklisted lines out, so a change to the
   blacklist makes the plugin analyze every encounter again. Manage it on the Blacklist tab.

@@ -44,7 +44,75 @@ namespace AugurACT.Core.EventTexts
                 record.Timer = edit.Timer;
             }
 
+            if (!string.IsNullOrEmpty(edit.Line))
+            {
+                record.Line = edit.Line;
+            }
+
+            RefreshRegex(record, encounter);
             return isNew;
+        }
+
+        // Adds a trigger to an encounter's event text, found by its text, or replaces the one with the same regex and
+        // category. A text the encounter doesn't list yet (a trigger made from a fight's list) is added with it.
+        public static TriggerSaved SaveTrigger(this EncounterStore store, string? zone, string? name, EventTextEdit text, EventTrigger trigger, DateTime today)
+        {
+            var encounter = store.FindByName(zone, name) ?? throw new ArgumentException("That encounter isn't in the encounters data.");
+            var checkedTrigger = trigger.Checked();
+            var checkedText = Check(text.Kind, text.Text);
+            var record = encounter.EventTexts.FirstOrDefault(t => Same(t.Text, checkedText.Text));
+            var textAdded = record == null;
+            if (record == null)
+            {
+                record = new EventTextRecord { Kind = checkedText.Kind, Text = checkedText.Text, Added = today.ToString("yyyy-MM-dd") };
+                encounter.EventTexts.Add(record);
+            }
+
+            if (record.Line == null && !string.IsNullOrEmpty(text.Line))
+            {
+                record.Line = text.Line;
+            }
+
+            RefreshRegex(record, encounter);
+            record.Triggers ??= new List<EventTrigger>();
+            var index = record.Triggers.FindIndex(t => t.SameAs(checkedTrigger));
+            if (index >= 0)
+            {
+                checkedTrigger.Added = record.Triggers[index].Added;
+                record.Triggers[index] = checkedTrigger;
+                return TriggerSaved.Replaced;
+            }
+
+            checkedTrigger.Added = today.ToString("yyyy-MM-dd");
+            record.Triggers.Add(checkedTrigger);
+            return textAdded ? TriggerSaved.AddedWithText : TriggerSaved.Added;
+        }
+
+        public static bool RemoveTrigger(this EncounterStore store, string? zone, string? name, string? text, EventTrigger? trigger)
+        {
+            var record = store.FindByName(zone, name)?.EventTexts.FirstOrDefault(t => Same(t.Text, text));
+            if (record?.Triggers == null || trigger == null)
+            {
+                return false;
+            }
+
+            var removed = record.Triggers.RemoveAll(t => t.SameAs(trigger)) > 0;
+            if (record.Triggers.Count == 0)
+            {
+                record.Triggers = null;
+            }
+
+            return removed;
+        }
+
+        // Builds the regex a new trigger for the text starts from: from its log line, or from the text and the
+        // encounter's NPC names when it has none.
+        public static void RefreshRegex(EventTextRecord record, EncounterRecord encounter)
+        {
+            var npcs = encounter.Bosses.Concat(encounter.Adds).Select(n => n.Name);
+            var regex = TriggerRegex.Build(record.Kind, record.Text, record.Line, npcs);
+            record.Regex = regex.Pattern;
+            record.RegexFromLine = regex.FromLine;
         }
 
         public static bool RemoveEventText(this EncounterStore store, string? zone, string? name, string? text)
@@ -87,6 +155,13 @@ namespace AugurACT.Core.EventTexts
             }
 
             return rules;
+        }
+
+        public enum TriggerSaved
+        {
+            Added,
+            AddedWithText,
+            Replaced,
         }
 
         private static EventTextRecord Check(string? kind, string? text)

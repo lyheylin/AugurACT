@@ -241,10 +241,10 @@ public class DeathDetectorTests
     public void AbilityOfANameEndingInSHasNoS()
     {
         var summary = Build(null, null,
-            (1, "Arrowss' Piercing Shot hits a test add for 5 piercing damage."),
-            (2, "Healerc's Field Medic heals Arrowss for 5 hit points."));
+            (1, "Archerss' Piercing Shot hits a test add for 5 piercing damage."),
+            (2, "Healerc's Field Medic heals Archerss for 5 hit points."));
 
-        Assert.Contains("Arrowss", summary.Players);
+        Assert.Contains("Archerss", summary.Players);
     }
 
     [Fact]

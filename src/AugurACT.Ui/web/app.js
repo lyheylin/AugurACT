@@ -226,6 +226,12 @@ function renderDetail() {
 
 function showItem(detail, mechanic, item, fight) {
   const box = detail.querySelector('.cast-detail');
+  // A second click on the selected mark clears it.
+  if (!item) {
+    box.hidden = true;
+    box.shownItem = null;
+    return;
+  }
   box.hidden = false;
   box.shownItem = item;
   mechanic.showDetail({
@@ -342,11 +348,14 @@ function renderSections() {
         expanded?.timeline?.refresh();
         renderSections();
       },
-      // Selects an item on the timeline and shows its detail, as a click on its mark does.
+      // Selects an item on the timeline and shows its detail, as a click on its mark does; selecting the item
+      // already selected clears it, also as a mark does.
       select(item) {
         if (!expanded?.timeline) return;
+        if (expanded.timeline.selected() === item) item = null;
         expanded.timeline.select(item);
         showItem(expanded.detail, mechanic, item, fight);
+        if (!item) return;
         expanded.detail.querySelector('.cast-detail').scrollIntoView({ block: 'nearest' });
       },
     });
@@ -704,6 +713,7 @@ if (host) {
     else if (data.type === 'analysis') onAnalysis(data);
     else if (data.type === 'encounter-npcs') onEncounterNpcs(data);
     else if (data.type === 'encounter-data') onEncounterData(data);
+    else if (data.type === 'notice') notice(data.text, data.error);
   });
   send({ type: 'ready' });
 }

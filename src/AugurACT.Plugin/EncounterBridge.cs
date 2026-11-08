@@ -68,6 +68,13 @@ namespace AugurACT.Plugin
                     var bosses = request.Bosses ?? new List<string>();
                     Enqueue(() => UpdateEncounter(updateId, bosses), urgent: true);
                     break;
+                // On the UI thread: the clipboard and ACT's trigger list belong to it.
+                case HostMessages.CopyTrigger:
+                    post(HostMessages.ToJson(ActTriggers.Copy(request.Trigger)));
+                    break;
+                case HostMessages.ImportTrigger:
+                    post(HostMessages.ToJson(ActTriggers.Import(request.Trigger)));
+                    break;
                 // Edits to the encounters data that features declare in Core (StoreEditSet).
                 case var type when StoreEditSet.TryGet(type, out var edit):
                     Enqueue(() => EditStore(edit, json), urgent: true);

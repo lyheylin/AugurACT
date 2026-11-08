@@ -3,8 +3,10 @@
 // Event texts: emotes, NPC speech and narration. A mark per line, in the speaker's lane (narration has its own
 // lane at the top), shaped and coloured by kind. Lines that differ only in their variables are one group: a
 // click selects the whole group. The list under the timeline adds a group to the encounters data or blacklists
-// it (web/eventtexts/), or removes it from this fight's list and timeline only. A group that repeats on a
-// steady timer (EventTextTimer in Core) shows its interval. Data: summary.eventTexts (EventTextGroup).
+// it (web/eventtexts/), makes an ACT trigger for it, or removes it from this fight's list and timeline only.
+// Triggers recorded for a text show under its row. A group that repeats on a
+// steady timer (EventTextTimer in Core) shows its interval. A line that names players drops a line from its mark
+// to each of their lanes, ending in a dot. Data: summary.eventTexts (EventTextGroup).
 (() => {
   const { make, fillLines, plural } = window.AugurUtil;
   const texts = window.AugurEventTexts;
@@ -58,13 +60,35 @@
 
     // Below the barrage bars in an NPC lane, centred in the others.
     draw(s, api) {
+      const markY = (lane) => (lane.kind === 'npc' ? lane.y + lane.height - 7 : lane.y + lane.height / 2);
+
+      // Lines to the players each event names, first, so every mark sits on top of them.
       for (const group of shown(s)) {
         const selected = api.isSelected(group);
         for (const occurrence of group.occurrences) {
           const lane = laneOf(api, occurrence, group.kind);
           if (!lane) continue;
           const cx = api.x(occurrence.at);
-          const cy = lane.kind === 'npc' ? lane.y + lane.height - 7 : lane.y + lane.height / 2;
+          for (const name of occurrence.players || []) {
+            const target = api.playerLane(name);
+            if (!target || target === lane) continue;
+            const ty = target.y + target.height / 2;
+            const node = api.el('g', { class: `et-ref et-${group.kind}${selected ? ' selected' : ''}` });
+            api.el('line', { class: 'ref-line', x1: cx, x2: cx, y1: markY(lane), y2: ty }, node);
+            api.el('circle', { class: 'ref-end', cx, cy: ty, r: 2.5 }, node);
+            api.el('title', {}, node).textContent = `${api.clock(occurrence.at)} ${name}: ${occurrence.text}`;
+            api.selectable(node, group);
+          }
+        }
+      }
+
+      for (const group of shown(s)) {
+        const selected = api.isSelected(group);
+        for (const occurrence of group.occurrences) {
+          const lane = laneOf(api, occurrence, group.kind);
+          if (!lane) continue;
+          const cx = api.x(occurrence.at);
+          const cy = markY(lane);
           const node = api.el('g', { class: `event-text et-${group.kind}${selected ? ' selected' : ''}` });
           api.el('circle', { class: 'hit', cx, cy, r: 7 }, node);
           const r = 3.5;
@@ -139,6 +163,14 @@
               texts.open({ mode: 'add', group, encounter: ctx.encounter, summary: s });
             });
             actions.appendChild(add);
+            const trigger = make('button', null, 'Trigger +');
+            trigger.type = 'button';
+            trigger.title = 'Make an ACT trigger for this text, saved with it in the encounters data';
+            trigger.addEventListener('click', (event) => {
+              event.stopPropagation();
+              texts.openTrigger({ group, encounter: ctx.encounter, summary: s });
+            });
+            actions.appendChild(trigger);
           }
           const remove = make('button', null, 'Remove');
           remove.type = 'button';
@@ -169,6 +201,7 @@
               choose();
             }
           });
+          if (entry) texts.appendTriggers(rows, record, entry, row.cells.length);
         }
         body.appendChild(table);
 

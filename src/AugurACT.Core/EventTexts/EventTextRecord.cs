@@ -24,6 +24,23 @@ namespace AugurACT.Core.EventTexts
 
         [DataMember(Name = "timer", Order = 4, EmitDefaultValue = false)]
         public RecordedTimer? Timer { get; set; }
+
+        // A log line of the text as the game wrote it (after the time stamp), markup included, from the fight it was
+        // added from. Trigger regexes are built from it. Missing for texts typed by hand.
+        [DataMember(Name = "line", Order = 5, EmitDefaultValue = false)]
+        public string? Line { get; set; }
+
+        // The regex a new trigger starts from (TriggerRegex), kept up to date by EventTextStore.RefreshRegex.
+        [DataMember(Name = "regex", Order = 6, EmitDefaultValue = false)]
+        public string? Regex { get; set; }
+
+        // False when the regex was built from the text alone, without a line.
+        [DataMember(Name = "regexFromLine", Order = 7, EmitDefaultValue = false)]
+        public bool RegexFromLine { get; set; }
+
+        // ACT triggers the user made for this text; null when there are none.
+        [DataMember(Name = "triggers", Order = 8, EmitDefaultValue = false)]
+        public List<EventTrigger>? Triggers { get; set; }
     }
 
     // How often an event text repeats, from the fights it was measured in (EventTextTimer) or typed by hand. The
@@ -71,5 +88,9 @@ namespace AugurACT.Core.EventTexts
 
         [DataMember(Name = "timer")]
         public RecordedTimer? Timer { get; set; }
+
+        // A log line of the text from the fight (EventTextOccurrence.Raw); replaces the recorded one when set.
+        [DataMember(Name = "line")]
+        public string? Line { get; set; }
     }
 }

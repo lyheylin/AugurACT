@@ -1,10 +1,10 @@
 'use strict';
 
-// Event texts on the page outside the timeline: each recorded encounter's list on the Encounters data tab, and
-// the Blacklist tab. Registered with AugurPage, which places them; the timeline part is mechanics/eventtext.js.
+// Event texts on the page outside the timeline: each recorded encounter's list on the Encounters data tab, with
+// each text's ACT triggers under it (eventtexts/trigger.js), and the Blacklist tab. Registered with AugurPage, which places them; the timeline part is mechanics/eventtext.js.
 (() => {
   const { make } = window.AugurUtil;
-  const { render, kindTag, formatTimer, describeRecorded, open } = window.AugurEventTexts;
+  const { render, kindTag, formatTimer, describeRecorded, open, openTrigger, appendTriggers } = window.AugurEventTexts;
   const ctx = () => window.AugurPage.ctx;
 
   // One encounter's event texts, on the Encounters data tab.
@@ -20,10 +20,11 @@
     }
     box.appendChild(head);
     box.appendChild(entryTable(record.eventTexts || [], 'No event texts yet. Add them from a fight’s timeline, or by hand.', true, (entry) => [
+      ['Trigger +', 'Make an ACT trigger for this text', () => openTrigger({ record, entry })],
       ['Edit', 'Change the text, description or timer', () => open({ mode: 'edit', record, entry })],
       ['Remove', `Remove from ${record.name}`, () => ctx().send({ type: 'remove-event-text', zone: record.zone, name: record.name, text: entry.text })],
       ['Blacklist', 'Never list this text in any encounter', () => open({ mode: 'blacklist', kind: entry.kind, text: entry.text })],
-    ]));
+    ], (body, entry, columns) => appendTriggers(body, record, entry, columns)));
     return box;
   }
 
@@ -44,7 +45,8 @@
     ]));
   }
 
-  function entryTable(entries, empty, withDetails, actions) {
+  // children(body, entry, columns), when given, adds rows under each entry's own.
+  function entryTable(entries, empty, withDetails, actions, children) {
     if (!entries.length) return make('p', 'muted', empty);
     const table = make('table', 'et-table');
     if (withDetails) {
@@ -69,6 +71,7 @@
       }
       const cell = row.insertCell();
       cell.className = 'et-actions';
+      children?.(body, entry, row.cells.length);
       if (!ctx()?.host) continue;
       for (const [label, title, run] of actions(entry)) {
         const button = make('button', null, label);

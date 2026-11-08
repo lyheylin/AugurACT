@@ -47,7 +47,8 @@ window.AugurTimeline = (() => {
     return { tops, npcs, players };
   }
 
-  // fight: { title, start, end, summary }. onSelect(mechanic, item) runs when a mark is clicked.
+  // fight: { title, start, end, summary }. onSelect(mechanic, item) runs when a mark is clicked; clicking a mark of
+  // the item already selected clears the selection, and onSelect gets a null item.
   // isShown(key) says whether a mechanic's marks are switched on; call refresh() after it changes.
   function create(container, fight, onSelect, isShown) {
     const origin = fight.start;
@@ -128,9 +129,9 @@ window.AugurTimeline = (() => {
           selectable: (node, item) => node.addEventListener('click', (event) => {
             event.stopPropagation();
             if (dragged) return;
-            selected = item;
+            selected = selected === item ? null : item;
             draw();
-            onSelect(mechanic, item);
+            onSelect(mechanic, selected);
           }),
         });
       }
@@ -196,6 +197,7 @@ window.AugurTimeline = (() => {
         selected = item;
         draw();
       },
+      selected: () => selected,
       refresh() {
         draw();
       },

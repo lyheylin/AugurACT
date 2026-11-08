@@ -40,6 +40,11 @@ internal static class TextsCommand
                 var extra = string.Join("; ", seen);
                 var every = group.Timer == null ? "" : $"   timer {group.Timer.Mean:F0}±{group.Timer.Spread:F0}s cv {group.Timer.Variation:F3}{(group.Timer.Steady ? " STEADY" : "")} ({group.Timer.Events} events, {group.Timer.Min}-{group.Timer.Max}s)";
                 Console.WriteLine($"  {group.Kind,-9} {group.Occurrences.Count,4}  {group.Template}{(extra.Length > 0 ? "   [" + extra + "]" : "")}{every}");
+
+                // The trigger regex, and a warning when it misses one of the group's own lines (as ACT sees them).
+                var regex = new System.Text.RegularExpressions.Regex(group.Regex);
+                var missed = group.Occurrences.Count(o => !regex.IsMatch(o.Raw));
+                Console.WriteLine($"                 trigger {group.Regex}{(missed > 0 ? $"   MISSES {missed}" : "")}");
             }
         }
 

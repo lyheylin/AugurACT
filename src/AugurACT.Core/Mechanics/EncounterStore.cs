@@ -40,9 +40,15 @@ namespace AugurACT.Core.Mechanics
                     encounter.Bosses ??= new List<NpcRecord>();
                     encounter.Adds ??= new List<NpcRecord>();
                     encounter.EventTexts ??= new List<EventTextRecord>();
-                    foreach (var text in encounter.EventTexts.Where(t => t.Timer != null))
+                    foreach (var text in encounter.EventTexts)
                     {
-                        text.Timer!.Fights ??= new List<long>();
+                        if (text.Timer != null)
+                        {
+                            text.Timer.Fights ??= new List<long>();
+                        }
+
+                        // The rules may have changed since it was saved.
+                        EventTextStore.RefreshRegex(text, encounter);
                     }
                 }
 

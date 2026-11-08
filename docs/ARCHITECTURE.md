@@ -9,8 +9,8 @@ src/AugurACT.Ui        net48            WebView2 host control.
 src/AugurACT.Ui/web                     The page shown in the plugin tab. The CLI inlines it into a standalone page.
 src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel, section and legend.
 src/AugurACT.Ui/web/page.js             AugurPage: registry for page features (tabs, encounters data sections).
-src/AugurACT.Ui/web/eventtexts          One page feature: format.js (templates, timers), dialog.js, feature.js, css.
-src/AugurACT.Core/EventTexts            Event texts in Core: detector, template format, timer, store edits, requests.
+src/AugurACT.Ui/web/eventtexts          One page feature: format.js (templates, timers), dialog.js, trigger.js, feature.js, css.
+src/AugurACT.Core/EventTexts            Event texts in Core: detector, template format, timer, trigger regex and XML, store edits, requests.
 src/AugurACT.Cli       net10.0          Runs Core over saved log files to tune rules. Runs on Linux/WSL.
 data/boss-mechanics.json                Boss catalog built by the CLI. Holds no player names.
 tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
@@ -34,7 +34,8 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 | `analyze` (id) | `analysis` (the encounter's summary with its barrages and player deaths) |
 | `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
-| Any edit in `StoreEditSet` (today: `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
+| `copy-trigger`, `import-trigger` (trigger) | `notice`. Handled on the UI thread (`ActTriggers`): ACT's XML on the clipboard, or `AddEditCustomTrigger` |
+| Any edit in `StoreEditSet` (today: `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`, `add-event-trigger`, `remove-event-trigger`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
 
 A newly ended encounter arrives as `encounters` with `replace: false`. After a list, the plugin analyzes every
 encounter in the background, newest first; requests from the page go ahead of that queue. Encounter ids are
@@ -75,7 +76,8 @@ The plugin (`EncounterBridge`) and `app.js` don't change for any of these. Each 
 
 Event texts use all of them: `EventTextDetector` (mechanic), `EventTextRequests` and `EventTextStore`
 (store edits), `ScanOptions.EventTextBlacklist` (setting), `mechanics/eventtext.js` (timeline and section) and
-`web/eventtexts/` (dialog, Blacklist tab, encounters data list).
+`web/eventtexts/` (dialogs, Blacklist tab, encounters data list). Their ACT triggers add `copy-trigger` and
+`import-trigger`, the only page requests that need ACT itself, so they live in the plugin (`ActTriggers`).
 
 ## Design rules
 
@@ -85,6 +87,12 @@ data and hosts the UI.
 
 **Don't block ACT's parse thread.** Analysis and encounter store writes run on one background thread, and results
 return to the UI thread through ACT's main form.
+
+**No real player names in the repository.** Docs, tests, code comments and data use made-up names (`Healerc`,
+`Tanka`, `Archerss`, `Selfy`, NPCs like `Bossy`) and never name a character: not other players, and not the
+user's own characters. Log examples copied from real fights get their player names replaced. Boss and NPC
+names are fine. Before committing, sweep new text against player names taken from the logs (the `players` of
+each fight in a CLI timeline page) and check that a made-up name doesn't occur in the logs.
 
 **Send JSON to the page, never HTML.** Log text includes player names and chat, so the page writes it with
 `textContent`, and a Content Security Policy limits it to bundled files.

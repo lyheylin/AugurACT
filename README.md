@@ -8,7 +8,8 @@ and produces trigger regexes.
 ACT's encounters with their barrage counts; click one for its barrage timeline. "Update encounters data"
 records a fight under its zone and main NPCs, with its adds and which of them release barrages. Each fight
 also lists its emotes, NPC speech and narration, grouped by text with variables like `{player}`; these can be
-added to a recorded encounter's event texts, or blacklisted. Other analysis is not built yet. See [the plan](docs/PLAN.md).
+added to a recorded encounter's event texts, or blacklisted, and given ACT triggers whose regexes match the
+line as the game wrote it (copy as ACT's XML, or import straight into ACT). Other analysis is not built yet. See [the plan](docs/PLAN.md).
 
 ## Requirements
 

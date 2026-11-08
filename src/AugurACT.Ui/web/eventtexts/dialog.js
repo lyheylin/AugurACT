@@ -7,7 +7,7 @@
   const { make, plural } = window.AugurUtil;
   const {
     slots, candidate, isAlwaysVariable, escapeLiteral, parse, toRegex, formatTimer, describeRecorded, readSeconds, secondsText,
-    mergeTimer, matchRecords, recordedEntry,
+    mergeTimer, matchRecords, recordedEntry, encounterOptions, recordOf,
   } = window.AugurEventTexts;
   const ctx = () => window.AugurPage.ctx;
 
@@ -151,10 +151,7 @@
 
   function chosenRecord() {
     if (state.mode === 'edit') return state.record;
-    const value = field('text-encounter').value;
-    if (!value) return null;
-    const [zone, name] = JSON.parse(value);
-    return (ctx().getData()?.encounters || []).find((r) => r.zone === zone && r.name === name) || null;
+    return recordOf(field('text-encounter').value);
   }
 
   // The timer the save would write, or { error }.
@@ -241,27 +238,8 @@
   }
 
   function fillEncounters(chosen, matches) {
-    const select = field('text-encounter');
-    select.replaceChildren();
-    const records = ctx().getData()?.encounters || [];
-    if (!chosen) select.appendChild(new Option('Choose an encounter…', ''));
-    const zones = new Map();
-    for (const r of records) {
-      if (!zones.has(r.zone)) zones.set(r.zone, []);
-      zones.get(r.zone).push(r);
-    }
-    const ordered = [...zones].sort(([a], [b]) => (matches?.[0]?.zone === b) - (matches?.[0]?.zone === a));
-    for (const [zone, listed] of ordered) {
-      const group = document.createElement('optgroup');
-      group.label = zone;
-      for (const r of listed) {
-        const option = new Option(r.name, JSON.stringify([r.zone, r.name]));
-        option.selected = r === chosen;
-        group.appendChild(option);
-      }
-      select.appendChild(group);
-    }
-    field('text-encounter-hint').textContent = records.length
+    const count = encounterOptions(field('text-encounter'), chosen, matches?.[0]?.zone);
+    field('text-encounter-hint').textContent = count
       ? (chosen || !matches ? '' : 'This fight’s encounter isn’t in the encounters data yet. Use "Update encounters data" first, or choose one.')
       : 'No encounters recorded yet. Use "Update encounters data" on a fight first.';
   }
@@ -392,6 +370,8 @@
           // Unticked keeps a recorded timer when adding, and removes it when editing.
           setTimer: timerOn || current.mode === 'edit',
           timer,
+          // The line as the game wrote it, for trigger regexes.
+          line: current.group?.occurrences[0]?.raw ?? null,
         },
       });
     });

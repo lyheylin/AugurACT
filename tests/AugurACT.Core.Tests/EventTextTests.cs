@@ -11,7 +11,7 @@ public class EventTextTests
     private static readonly DateTime Day1 = new(2026, 11, 1);
 
     // Players use named abilities, which is how the roster knows them; Bossy never does.
-    private static readonly string[] Players = { "Healerc", "Tanka", "Arrowss" };
+    private static readonly string[] Players = { "Healerc", "Tanka", "Archerss" };
 
     private static List<EventTextGroup> Run(IEnumerable<Regex>? blacklist, params string[] bodies) =>
         Run(new ScanOptions { EventTextBlacklist = (blacklist ?? Array.Empty<Regex>()).ToList() }, bodies);
@@ -54,15 +54,18 @@ public class EventTextTests
     {
         var groups = Run(
             @"\#FFFF00Bossy invokes divine devastation at Tanka!",
-            @"\#FFFF00Bossy invokes divine devastation at ARROWSS!",
+            @"\#FFFF00Bossy invokes divine devastation at ARCHERSS!",
             @"\#FFFF00Bossy invokes divine devastation at YOU!");
 
         var group = Assert.Single(groups);
         Assert.Equal("Bossy invokes divine devastation at {player}!", group.Template);
         Assert.Equal(3, group.Occurrences.Count);
         var slot = Assert.Single(group.Parts, p => p.Slot != null);
-        Assert.Equal(new[] { "Tanka", "ARROWSS", "YOU" }, slot.Values);
+        Assert.Equal(new[] { "Tanka", "ARCHERSS", "YOU" }, slot.Values);
         Assert.True(slot.Variable);
+
+        // Each line names a player lane: capitals become the player's spelling, YOU the logger.
+        Assert.Equal(new[] { "Tanka", "Archerss", "Healerc" }, group.Occurrences.Select(o => Assert.Single(o.Players)));
     }
 
     [Fact]
@@ -101,10 +104,10 @@ public class EventTextTests
     {
         var group = Assert.Single(Run(
             Npc("Tanka", "says, \"Your blood calls to me.\""),
-            Npc("Arrowss", "says, \"Your blood calls to me.\"")));
+            Npc("Archerss", "says, \"Your blood calls to me.\"")));
 
         Assert.Equal("{player} says, \"Your blood calls to me.\"", group.Template);
-        Assert.Equal(new[] { "Tanka", "Arrowss" }, group.Occurrences.Select(o => o.Player));
+        Assert.Equal(new[] { "Tanka", "Archerss" }, group.Occurrences.Select(o => o.Player));
         Assert.All(group.Occurrences, o => Assert.Null(o.Npc));
     }
 

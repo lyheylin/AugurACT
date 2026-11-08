@@ -14,7 +14,7 @@ namespace AugurACT.Core.EventTexts
     //
     //   \aNPC 4773594 Boss:Boss\/a readies a barrage!               emote
     //   \aNPC 4773594 Boss:Boss\/a says, "Kneel!"                   say
-    //   \#FF00FFThresinet targets Tesla for Flesh Decay!            narration (a colour code, no NPC link)
+    //   \#FF00FFThresinet targets Tanka for Flesh Decay!            narration (a colour code, no NPC link)
     //
     // Player-triggered narration (Heroic Surge) and system text look the same; the user blacklists those.
     // Variables: player names always; a class, archetype or number only when it varies within the encounter.
@@ -71,7 +71,7 @@ namespace AugurACT.Core.EventTexts
                 return;
             }
 
-            lines.Add(new Line(line.EpochSeconds, kind, source, text));
+            lines.Add(new Line(line.EpochSeconds, kind, source, text, body));
         }
 
         public int Complete(EncounterSummary summary)
@@ -84,7 +84,8 @@ namespace AugurACT.Core.EventTexts
 
         public IReadOnlyList<EventTextGroup> Complete()
         {
-            var tokens = Tokenizer(context.Roster.Players());
+            var players = context.Roster.Players();
+            var tokens = Tokenizer(players);
             var groups = new Dictionary<string, Builder>(StringComparer.Ordinal);
             var order = new List<Builder>();
             foreach (var line in lines)
@@ -98,7 +99,7 @@ namespace AugurACT.Core.EventTexts
                     order.Add(group);
                 }
 
-                group.Add(line, split.Values, context.Roster);
+                group.Add(line, split.Values, context.Roster, players);
             }
 
             return order.Select(g => g.Build()).ToList();
@@ -129,7 +130,7 @@ namespace AugurACT.Core.EventTexts
         }
 
         // Finds the parts of a line that could be variables. Player names match whole words in any case
-        // ("TROLLISHUS"); "YOU", only in capitals, is the logger.
+        // ("TANKA"); "YOU", only in capitals, is the logger.
         private static Regex Tokenizer(IEnumerable<string> players)
         {
             var names = players
@@ -186,9 +187,27 @@ namespace AugurACT.Core.EventTexts
                 this.parts = parts;
             }
 
-            public void Add(Line line, List<string> values, PlayerRoster roster)
+            public void Add(Line line, List<string> values, PlayerRoster roster, List<string> players)
             {
-                var occurrence = new EventTextOccurrence { At = line.At, Text = line.Text, Values = values };
+                var occurrence = new EventTextOccurrence { At = line.At, Text = line.Text, Values = values, Raw = line.Raw };
+
+                // The players the line names, as their lanes are named ("YOU" is the logger, "TANKA" is Tanka).
+                var slots = parts.Where(p => p.Slot != null).ToList();
+                for (var i = 0; i < slots.Count && i < values.Count; i++)
+                {
+                    if (slots[i].Slot != EventTextTemplate.Player)
+                    {
+                        continue;
+                    }
+
+                    var name = roster.Normalize(values[i]);
+                    name = players.FirstOrDefault(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase)) ?? name;
+                    if (!occurrence.Players.Contains(name))
+                    {
+                        occurrence.Players.Add(name);
+                    }
+                }
+
                 if (line.Source != null)
                 {
                     // Charmed players speak as NPCs.
@@ -228,6 +247,7 @@ namespace AugurACT.Core.EventTexts
 
                 group.Template = template.ToString();
                 group.Occurrences.AddRange(occurrences);
+                group.Regex = TriggerRegex.Build(kind, group.Template, occurrences[0].Raw).Pattern;
                 group.Timer = EventTextTimer.Measure(occurrences.Select(o => o.At));
                 return group;
             }
@@ -251,12 +271,13 @@ namespace AugurACT.Core.EventTexts
 
         private sealed class Line
         {
-            public Line(long at, string kind, string? source, string text)
+            public Line(long at, string kind, string? source, string text, string raw)
             {
                 At = at;
                 Kind = kind;
                 Source = source;
                 Text = text;
+                Raw = raw;
             }
 
             public long At { get; }
@@ -266,6 +287,8 @@ namespace AugurACT.Core.EventTexts
             public string? Source { get; }
 
             public string Text { get; }
+
+            public string Raw { get; }
         }
     }
 }

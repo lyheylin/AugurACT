@@ -40,6 +40,10 @@ namespace AugurACT.Core.EventTexts
         // How regularly it repeats; null with fewer than EventTextTimer.MinEvents events.
         [DataMember(Name = "timer", Order = 4, EmitDefaultValue = false)]
         public EventTextTimer? Timer { get; set; }
+
+        // The regex a trigger for the template starts from, built from the first line (TriggerRegex).
+        [DataMember(Name = "regex", Order = 5)]
+        public string Regex { get; set; } = "";
     }
 
     [DataContract]
@@ -83,5 +87,15 @@ namespace AugurACT.Core.EventTexts
         // One value per slot in the group's parts, in order.
         [DataMember(Name = "values", Order = 4)]
         public List<string> Values { get; set; } = new List<string>();
+
+        // The line as the game wrote it, after the time stamp: link markup and colour codes included. What an ACT
+        // trigger matches against.
+        [DataMember(Name = "raw", Order = 5)]
+        public string Raw { get; set; } = "";
+
+        // The players its {player} values name, as the timeline's player lanes are named: "YOU" becomes the
+        // logger, and capitals the player's own spelling. In order, without repeats.
+        [DataMember(Name = "players", Order = 6)]
+        public List<string> Players { get; set; } = new List<string>();
     }
 }

@@ -21,6 +21,11 @@ namespace AugurACT.Core.Host
         public const string EncounterNpcs = "encounter-npcs";
         public const string UpdateEncounter = "update-encounter";
 
+        // An event text's trigger to ACT: XML on the clipboard, or straight into ACT's custom triggers. Both answer
+        // with a "notice".
+        public const string CopyTrigger = "copy-trigger";
+        public const string ImportTrigger = "import-trigger";
+
         // Requests that edit the encounters data are listed in StoreEditSet.
 
         public static string ToJson<T>(T message)
@@ -65,6 +70,24 @@ namespace AugurACT.Core.Host
         // For "update-encounter": the NPCs the user chose as the encounter's main NPCs.
         [DataMember(Name = "bosses")]
         public List<string>? Bosses { get; set; }
+
+        // For "copy-trigger" and "import-trigger".
+        [DataMember(Name = "trigger")]
+        public EventTrigger? Trigger { get; set; }
+    }
+
+    // Something to tell the user that changed no data.
+    [DataContract]
+    public sealed class NoticeMessage
+    {
+        [DataMember(Name = "type", Order = 0)]
+        public string Type { get; private set; } = "notice";
+
+        [DataMember(Name = "text", Order = 1)]
+        public string Text { get; set; } = "";
+
+        [DataMember(Name = "error", Order = 2, EmitDefaultValue = false)]
+        public bool Error { get; set; }
     }
 
     // Rules the page needs from Core, sent once when the page starts (and written into the CLI's page), so the

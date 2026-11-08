@@ -58,6 +58,7 @@ namespace AugurACT.Ui
                     "WebView2");
                 var environment = await CoreWebView2Environment.CreateAsync(null, userData);
                 await webView.EnsureCoreWebView2Async(environment);
+                await ClearCache();
 
                 webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
                     VirtualHost,
@@ -70,6 +71,19 @@ namespace AugurACT.Ui
             catch (Exception ex)
             {
                 setStatus("WebView2 failed to start: " + ex.Message);
+            }
+        }
+
+        // The page's files change with every plugin update, but WebView2 may keep serving cached copies of them.
+        private async System.Threading.Tasks.Task ClearCache()
+        {
+            try
+            {
+                await webView.CoreWebView2.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.DiskCache);
+            }
+            catch (Exception ex) when (ex is NotImplementedException || ex is System.Runtime.InteropServices.COMException || ex is InvalidOperationException)
+            {
+                // An older WebView2 runtime; the page may then be stale until the cache expires.
             }
         }
 

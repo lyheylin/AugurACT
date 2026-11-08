@@ -1,5 +1,6 @@
 /* Event texts everywhere outside the timeline: their colours and swatches, templates drawn with variable chips,
-   the lists on the Encounters data and Blacklist tabs, and the add / edit / blacklist dialog. The timeline's
+   the lists on the Encounters data and Blacklist tabs, the add / edit / blacklist dialog, and triggers (their rows
+   under a text, and their dialog). The timeline's
    marks and its list are in mechanics/eventtext.css. */
 :root {
   --et-emote: #b5631d;
@@ -64,3 +65,38 @@
 .et-timer-values { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .et-timer-values input { font: 12px/1.4 Consolas, "Cascadia Mono", monospace; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
 .et-timer-values.off { opacity: 0.45; }
+
+/* A text's triggers, as rows under it. */
+.et-table tr.et-trigger-row td { padding-top: 0; border-top: 0; }
+.et-trigger-tag { display: inline-block; margin-left: 14px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.et-trigger-tag::before { content: "\21B3\00A0"; }
+.et-trigger-cell { white-space: normal; }
+.et-regex { font: 11px/1.5 Consolas, "Cascadia Mono", monospace; word-break: break-all; }
+.et-trigger-info { font-size: 11px; }
+
+/* Trigger dialog. */
+#trigger-dialog { width: min(680px, calc(100vw - 32px)); }
+#trigger-dialog input[type="text"] { font: inherit; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+#trigger-dialog input:disabled { opacity: 0.5; }
+#trigger-regex, #trigger-tts { font: 12px/1.5 Consolas, "Cascadia Mono", monospace !important; }
+.trigger-text { padding: 6px 8px; border: 1px dashed var(--rule); border-radius: 4px; background: var(--panel); }
+.trigger-sound { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.trigger-sound label { display: inline-flex; align-items: center; gap: 4px; }
+.trigger-sound input[type="text"] { flex: 1 1 220px; }
+.trigger-row { display: flex; gap: 8px; align-items: flex-end; }
+.trigger-row .text-field { flex: 1; }
+.trigger-checks { display: flex; gap: 16px; flex-wrap: wrap; }
+.trigger-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+#trigger-check, #trigger-error { font-size: 12px; min-height: 1.4em; }
+#trigger-check.error, #trigger-error { color: var(--error); }
+.et-table tr:has(+ tr.et-trigger-row) td { border-bottom-color: transparent; }
+#trigger-encounter-hint:empty, #trigger-groups:empty { display: none; }
+.trigger-you { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 4px; }
+.trigger-you[hidden] { display: none; }
+.trigger-you-title { font-size: 12px; color: var(--muted); font-weight: 600; }
+.trigger-you-groups { display: flex; flex-direction: column; gap: 2px; }
+.trigger-you-group code { font: 600 11px/1.5 Consolas, "Cascadia Mono", monospace; padding: 0 4px; border-radius: 3px; background: var(--selected); color: var(--accent); }
+.trigger-you-group.is-you code { background: var(--accent); color: var(--bg); }
+.trigger-you-row { display: flex; gap: 10px; align-items: center; }
+.trigger-you-row .hint { margin: 0; }
+.trigger-you-row button { white-space: nowrap; }

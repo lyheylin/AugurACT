@@ -147,6 +147,37 @@ window.AugurEventTexts = (() => {
       .map((m) => m.record);
   }
 
+  // Fills a <select> with the recorded encounters, grouped by zone, the given zone's first. Values are
+  // JSON [zone, name]; recordOf reads one back.
+  function encounterOptions(select, chosen, zone) {
+    select.replaceChildren();
+    const records = window.AugurPage.ctx?.getData()?.encounters || [];
+    if (!chosen) select.appendChild(new Option('Choose an encounter…', ''));
+    const zones = new Map();
+    for (const r of records) {
+      if (!zones.has(r.zone)) zones.set(r.zone, []);
+      zones.get(r.zone).push(r);
+    }
+    const ordered = [...zones].sort(([a], [b]) => (zone === b) - (zone === a));
+    for (const [name, listed] of ordered) {
+      const group = document.createElement('optgroup');
+      group.label = name;
+      for (const r of listed) {
+        const option = new Option(r.name, JSON.stringify([r.zone, r.name]));
+        option.selected = r === chosen;
+        group.appendChild(option);
+      }
+      select.appendChild(group);
+    }
+    return records.length;
+  }
+
+  function recordOf(value) {
+    if (!value) return null;
+    const [zone, name] = JSON.parse(value);
+    return (window.AugurPage.ctx?.getData()?.encounters || []).find((r) => r.zone === zone && r.name === name) || null;
+  }
+
   // The recorded entry that already covers a group from this fight, if any.
   function recordedEntry(record, group) {
     for (const entry of record?.eventTexts || []) {
@@ -159,5 +190,6 @@ window.AugurEventTexts = (() => {
   return {
     KINDS, slots, candidate, isAlwaysVariable, escapeLiteral, parse, toRegex, render, kindTag,
     formatTimer, describeRecorded, readSeconds, secondsText, mergeTimer, matchRecords, recordedEntry,
+    encounterOptions, recordOf,
   };
 })();
