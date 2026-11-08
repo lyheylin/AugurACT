@@ -6,6 +6,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using AugurACT.Core.Encounters;
+using AugurACT.Core.EventTexts;
 using AugurACT.Core.Mechanics;
 
 namespace AugurACT.Core.Host
@@ -20,6 +21,13 @@ namespace AugurACT.Core.Host
         public const string EncounterNpcs = "encounter-npcs";
         public const string UpdateEncounter = "update-encounter";
 
+        // An event text's trigger to ACT: XML on the clipboard, or straight into ACT's custom triggers. Both answer
+        // with a "notice".
+        public const string CopyTrigger = "copy-trigger";
+        public const string ImportTrigger = "import-trigger";
+
+        // Requests that edit the encounters data are listed in StoreEditSet.
+
         public static string ToJson<T>(T message)
         {
             using (var stream = new MemoryStream())
@@ -29,13 +37,17 @@ namespace AugurACT.Core.Host
             }
         }
 
-        public static PageRequest? ParseRequest(string json)
+        public static PageRequest? ParseRequest(string json) => Parse<PageRequest>(json);
+
+        // Reads a page message as T, ignoring fields T doesn't have; null when it isn't valid JSON for T.
+        public static T? Parse<T>(string json)
+            where T : class
         {
             try
             {
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
                 {
-                    return (PageRequest)new DataContractJsonSerializer(typeof(PageRequest)).ReadObject(stream);
+                    return (T)new DataContractJsonSerializer(typeof(T)).ReadObject(stream);
                 }
             }
             catch (SerializationException)
@@ -58,6 +70,36 @@ namespace AugurACT.Core.Host
         // For "update-encounter": the NPCs the user chose as the encounter's main NPCs.
         [DataMember(Name = "bosses")]
         public List<string>? Bosses { get; set; }
+
+        // For "copy-trigger" and "import-trigger".
+        [DataMember(Name = "trigger")]
+        public EventTrigger? Trigger { get; set; }
+    }
+
+    // Something to tell the user that changed no data.
+    [DataContract]
+    public sealed class NoticeMessage
+    {
+        [DataMember(Name = "type", Order = 0)]
+        public string Type { get; private set; } = "notice";
+
+        [DataMember(Name = "text", Order = 1)]
+        public string Text { get; set; } = "";
+
+        [DataMember(Name = "error", Order = 2, EmitDefaultValue = false)]
+        public bool Error { get; set; }
+    }
+
+    // Rules the page needs from Core, sent once when the page starts (and written into the CLI's page), so the
+    // page never keeps its own copy. A feature with such rules adds a field here.
+    [DataContract]
+    public sealed class PageConfigMessage
+    {
+        [DataMember(Name = "type", Order = 0)]
+        public string Type { get; private set; } = "config";
+
+        [DataMember(Name = "eventTexts", Order = 1)]
+        public EventTextConfig EventTexts { get; set; } = EventTextConfig.Create();
     }
 
     // One ACT encounter, without its analysis.
@@ -202,5 +244,25 @@ namespace AugurACT.Core.Host
 
         [DataMember(Name = "error", Order = 5, EmitDefaultValue = false)]
         public string? Error { get; set; }
+
+        [DataMember(Name = "blacklist", Order = 6)]
+        public List<EventTextRecord> Blacklist { get; set; } = new List<EventTextRecord>();
+
+        // What a StoreEditSet edit did, to show the user.
+        [DataMember(Name = "notice", Order = 7, EmitDefaultValue = false)]
+        public string? Notice { get; set; }
+
+        // True when an edit changed the scan options (like the blacklist): every encounter is being analyzed
+        // again, and the page should ask for the one it shows.
+        [DataMember(Name = "reanalyzing", Order = 8, EmitDefaultValue = false)]
+        public bool Reanalyzing { get; set; }
+
+        // Everything the page shows from the store. Data a feature adds to EncounterStore goes here too.
+        public EncounterDataMessage With(EncounterStore store)
+        {
+            Encounters = store.Encounters;
+            Blacklist = store.Blacklist;
+            return this;
+        }
     }
 }

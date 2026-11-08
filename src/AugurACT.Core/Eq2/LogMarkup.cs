@@ -19,7 +19,8 @@ namespace AugurACT.Core.Eq2
                 return body;
             }
 
-            return Color.Replace(Link.Replace(body, "${display}"), "");
+            // Colours first: item links carry one inside their display text ("\aITEM 1 2:\#f0c0a0Ring\/a").
+            return Link.Replace(Color.Replace(body, ""), "${display}");
         }
 
         public static bool TryParseLeadingNpc(string body, out long id, out string name, out string rest)

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using AugurACT.Core.EventTexts;
 
 namespace AugurACT.Core.Mechanics
 {
@@ -18,6 +19,10 @@ namespace AugurACT.Core.Mechanics
         [DataMember(Name = "encounters", Order = 0)]
         public List<EncounterRecord> Encounters { get; set; } = new List<EncounterRecord>();
 
+        // Event texts never to list, in any encounter (Heroic Surge and other player or system text).
+        [DataMember(Name = "eventTextBlacklist", Order = 1)]
+        public List<EventTextRecord> Blacklist { get; set; } = new List<EventTextRecord>();
+
         public static EncounterStore Load(string path)
         {
             if (!File.Exists(path))
@@ -29,10 +34,22 @@ namespace AugurACT.Core.Mechanics
             {
                 var store = (EncounterStore)new DataContractJsonSerializer(typeof(EncounterStore)).ReadObject(stream);
                 store.Encounters ??= new List<EncounterRecord>();
+                store.Blacklist ??= new List<EventTextRecord>();
                 foreach (var encounter in store.Encounters)
                 {
                     encounter.Bosses ??= new List<NpcRecord>();
                     encounter.Adds ??= new List<NpcRecord>();
+                    encounter.EventTexts ??= new List<EventTextRecord>();
+                    foreach (var text in encounter.EventTexts)
+                    {
+                        if (text.Timer != null)
+                        {
+                            text.Timer.Fights ??= new List<long>();
+                        }
+
+                        // The rules may have changed since it was saved.
+                        EventTextStore.RefreshRegex(text, encounter);
+                    }
                 }
 
                 store.Sort();
@@ -125,6 +142,14 @@ namespace AugurACT.Core.Mechanics
             return result;
         }
 
+        public EncounterRecord? FindByName(string? zone, string? name)
+        {
+            var zoneName = ZoneName(zone);
+            return Encounters.FirstOrDefault(e =>
+                string.Equals(e.Zone, zoneName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(e.Name, name?.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
         public EncounterRecord? Find(string? zone, IEnumerable<string> bosses)
         {
             var zoneName = ZoneName(zone);
@@ -204,6 +229,10 @@ namespace AugurACT.Core.Mechanics
 
         [DataMember(Name = "updated", Order = 6)]
         public string? Updated { get; set; }
+
+        // Emotes, NPC speech and narration the user picked as this encounter's, as EventTextTemplate texts.
+        [DataMember(Name = "eventTexts", Order = 7)]
+        public List<EventTextRecord> EventTexts { get; set; } = new List<EventTextRecord>();
     }
 
     // One NPC and what is known about its mechanics. More mechanics will add fields here.

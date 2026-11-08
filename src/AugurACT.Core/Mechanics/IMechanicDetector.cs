@@ -19,11 +19,12 @@ namespace AugurACT.Core.Mechanics
     // What every detector may need to know about the encounter it's reading.
     public sealed class ScanContext
     {
-        public ScanContext(string? selfName, string? zone, PlayerRoster roster)
+        public ScanContext(string? selfName, string? zone, PlayerRoster roster, ScanOptions? options = null)
         {
             SelfName = string.IsNullOrEmpty(selfName) ? null : selfName;
             Zone = zone;
             Roster = roster;
+            Options = options ?? ScanOptions.None;
         }
 
         // The logging character, whose own lines say "YOU".
@@ -32,5 +33,8 @@ namespace AugurACT.Core.Mechanics
         public string? Zone { get; }
 
         public PlayerRoster Roster { get; }
+
+        // The user's settings, from the encounters data.
+        public ScanOptions Options { get; }
     }
 }

@@ -123,6 +123,13 @@ tr.detail-row > td { padding: 0 0 12px; white-space: normal; background: var(--b
 .lines { margin: 0; padding: 0; list-style: none; font: 12px/1.5 Consolas, "Cascadia Mono", monospace; max-height: 320px; overflow: auto; }
 .lines li { white-space: pre-wrap; word-break: break-word; }
 .lines time { color: var(--muted); margin-right: 8px; }
+.lines time .elapsed { opacity: 0.8; }
+
+/* Sections some mechanics add under the timeline (AugurTimeline "section"). */
+.mech-section { margin-top: 12px; }
+.mech-section > h3 { margin: 0 0 4px; }
+button.link { border: 0; background: transparent; padding: 0; color: var(--accent); text-decoration: underline; font-size: inherit; }
+button.link:hover:not(:disabled) { background: transparent; }
 
 /* Encounters data */
 .data-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 4px; }

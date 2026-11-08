@@ -28,6 +28,7 @@ namespace AugurACT.Plugin
         private readonly Dictionary<string, EncounterSummary> summaries = new Dictionary<string, EncounterSummary>();
         private readonly Thread worker;
         private EncounterStore? store;
+        private ScanOptions? scanOptions;
         private bool stopping;
 
         public EncounterBridge(Action<string> post, Action<string> setStatus, string storePath)
@@ -46,6 +47,10 @@ namespace AugurACT.Plugin
             switch (request?.Type)
             {
                 case HostMessages.Ready:
+                    post(HostMessages.ToJson(new PageConfigMessage()));
+                    SendList();
+                    Enqueue(SendEncounterData, urgent: true);
+                    break;
                 case HostMessages.List:
                     SendList();
                     Enqueue(SendEncounterData, urgent: true);
@@ -62,6 +67,17 @@ namespace AugurACT.Plugin
                     var updateId = request.Id;
                     var bosses = request.Bosses ?? new List<string>();
                     Enqueue(() => UpdateEncounter(updateId, bosses), urgent: true);
+                    break;
+                // On the UI thread: the clipboard and ACT's trigger list belong to it.
+                case HostMessages.CopyTrigger:
+                    post(HostMessages.ToJson(ActTriggers.Copy(request.Trigger)));
+                    break;
+                case HostMessages.ImportTrigger:
+                    post(HostMessages.ToJson(ActTriggers.Import(request.Trigger)));
+                    break;
+                // Edits to the encounters data that features declare in Core (StoreEditSet).
+                case var type when StoreEditSet.TryGet(type, out var edit):
+                    Enqueue(() => EditStore(edit, json), urgent: true);
                     break;
             }
         }
@@ -186,7 +202,7 @@ namespace AugurACT.Plugin
         {
             var lines = CopyLines(encounter);
             var self = string.IsNullOrEmpty(encounter.CharName) ? ActGlobals.charName : encounter.CharName;
-            var summary = EncounterSummary.Build(encounter.Title, encounter.ZoneName, lines, self, Allies(encounter));
+            var summary = EncounterSummary.Build(encounter.Title, encounter.ZoneName, lines, self, Allies(encounter), Options());
             lock (gate)
             {
                 summaries[id] = summary;
@@ -273,16 +289,66 @@ namespace AugurACT.Plugin
                 ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: encounters data update failed");
             }
 
-            message.Encounters = Store().Encounters;
+            message.With(Store());
             post(HostMessages.ToJson(message));
         }
+
+        // Runs one StoreEditSet edit, saves, and answers with the encounters data. An edit that changes the scan
+        // options (like the event text blacklist) makes every encounter be analyzed again.
+        private void EditStore(IStoreEdit edit, string json)
+        {
+            var message = new EncounterDataMessage { Path = storePath };
+            try
+            {
+                var current = Store();
+                var result = edit.Apply(json, current, DateTime.Now);
+                current.Save(storePath);
+                message.Notice = result.Notice;
+                if (result.ChangesScanOptions)
+                {
+                    message.Reanalyzing = true;
+                    Reanalyze();
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                message.Error = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                message.Error = "Saving the encounters data failed: " + ex.Message;
+                ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: encounters data edit failed (" + edit.Type + ")");
+            }
+
+            message.With(Store());
+            post(HostMessages.ToJson(message));
+        }
+
+        private void Reanalyze()
+        {
+            scanOptions = null;
+            List<string> ids;
+            lock (gate)
+            {
+                summaries.Clear();
+                backgroundJobs.Clear();
+                ids = encounters.Keys.ToList();
+            }
+
+            foreach (var id in ids)
+            {
+                Enqueue(() => Analyze(id, force: false), urgent: false);
+            }
+        }
+
+        private ScanOptions Options() => scanOptions ??= ScanOptions.From(Store());
 
         private void SendEncounterData()
         {
             var message = new EncounterDataMessage { Path = storePath };
             try
             {
-                message.Encounters = Store().Encounters;
+                message.With(Store());
             }
             catch (Exception ex)
             {

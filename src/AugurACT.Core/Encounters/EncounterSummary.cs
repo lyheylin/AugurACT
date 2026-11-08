@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using AugurACT.Core.EventTexts;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -46,14 +47,24 @@ namespace AugurACT.Core.Encounters
         [DataMember(Name = "deaths", Order = 21)]
         public List<PlayerDeath> Deaths { get; private set; } = new List<PlayerDeath>();
 
+        // Emotes, NPC speech and narration, grouped by text with variables (EventTextDetector).
+        [DataMember(Name = "eventTexts", Order = 22)]
+        public List<EventTextGroup> EventTexts { get; private set; } = new List<EventTextGroup>();
+
         // How many mechanic events of any kind were found.
         public int MechanicEvents { get; private set; }
 
-        // players is ACT's ally list; without it the log has to show who the players are.
+        // players is ACT's ally list; without it the log has to show who the players are. options are the user's
+        // settings from the encounters data (ScanOptions.From).
         public static EncounterSummary Build(
-            string title, string zone, IEnumerable<string> lines, string? selfName = null, IEnumerable<string>? players = null)
+            string title,
+            string zone,
+            IEnumerable<string> lines,
+            string? selfName = null,
+            IEnumerable<string>? players = null,
+            ScanOptions? options = null)
         {
-            var builder = new Builder(title, zone, selfName, players);
+            var builder = new Builder(title, zone, selfName, players, options);
             foreach (var line in lines)
             {
                 builder.Add(line);
@@ -86,11 +97,12 @@ namespace AugurACT.Core.Encounters
             private readonly IReadOnlyList<IMechanicDetector> detectors;
             private readonly bool[] wanted;
 
-            public Builder(string title, string zone, string? selfName = null, IEnumerable<string>? players = null)
+            public Builder(
+                string title, string zone, string? selfName = null, IEnumerable<string>? players = null, ScanOptions? options = null)
             {
                 summary = new EncounterSummary { Title = title, Zone = zone };
                 roster = new PlayerRoster(selfName, players);
-                detectors = MechanicSet.Create(new ScanContext(selfName, zone, roster));
+                detectors = MechanicSet.Create(new ScanContext(selfName, zone, roster, options));
                 wanted = new bool[detectors.Count];
             }
 

@@ -7,7 +7,10 @@ src/AugurACT.Core      netstandard2.0   Log parsing and analysis. No ACT or UI r
 src/AugurACT.Plugin    net48            ACT entry point. Builds AugurACT.dll. Must stay minimal (see below).
 src/AugurACT.Ui        net48            WebView2 host control.
 src/AugurACT.Ui/web                     The page shown in the plugin tab. The CLI inlines it into a standalone page.
-src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel and legend.
+src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel, section and legend.
+src/AugurACT.Ui/web/page.js             AugurPage: registry for page features (tabs, encounters data sections).
+src/AugurACT.Ui/web/eventtexts          One page feature: format.js (templates, timers), dialog.js, trigger.js, feature.js, css.
+src/AugurACT.Core/EventTexts            Event texts in Core: detector, template format, timer, trigger regex and XML, store edits, requests.
 src/AugurACT.Cli       net10.0          Runs Core over saved log files to tune rules. Runs on Linux/WSL.
 data/boss-mechanics.json                Boss catalog built by the CLI. Holds no player names.
 tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
@@ -26,10 +29,13 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 
 | From page | Plugin answers with |
 | --- | --- |
-| `ready`, `list` | `encounters` (the whole list, newest first) and `encounter-data` |
+| `ready` | `config` (rules defined in Core that the page needs, like event text variables), then as for `list` |
+| `list` | `encounters` (the whole list, newest first) and `encounter-data` |
 | `analyze` (id) | `analysis` (the encounter's summary with its barrages and player deaths) |
 | `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
+| `copy-trigger`, `import-trigger` (trigger) | `notice`. Handled on the UI thread (`ActTriggers`): ACT's XML on the clipboard, or `AddEditCustomTrigger` |
+| Any edit in `StoreEditSet` (today: `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`, `add-event-trigger`, `remove-event-trigger`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
 
 A newly ended encounter arrives as `encounters` with `replace: false`. After a list, the plugin analyzes every
 encounter in the background, newest first; requests from the page go ahead of that queue. Encounter ids are
@@ -44,13 +50,34 @@ when the encounter's line count has changed since.
 Each mechanic is a detector in Core and a pair of files in the page, joined by one list on the summary:
 
 ```
-Core   IMechanicDetector (BarrageDetector, DeathDetector)  <- MechanicSet.Create, with a ScanContext and PlayerRoster
-       EncounterSummary.Build runs them all over an encounter's lines -> summary.barrages, summary.deaths, summary.players
+Core   IMechanicDetector (BarrageDetector, DeathDetector, EventTextDetector)  <- MechanicSet.Create, with a ScanContext and PlayerRoster
+       EncounterSummary.Build runs them all over an encounter's lines -> summary.barrages, .deaths, .eventTexts, .players
 Plugin EncounterBridge sends the summary as "analysis"; CLI "timeline" cuts logs into fights (FightSplitter) and embeds it
 Page   web/timeline.js draws lanes and the axis; web/mechanics/*.js register columns, marks, panels and legend
 ```
 
 Adding one is described in [Adding a mechanic](ADDING-A-MECHANIC.md).
+
+## Extension points
+
+Each kind of addition has one place to register, so a feature lives in its own files:
+
+| To add | Core | Page |
+| --- | --- | --- |
+| A mechanic found in the log | An `IMechanicDetector` in `MechanicSet`, a list on `EncounterSummary` | `web/mechanics/<name>.js` + `.css`, `AugurTimeline.register` |
+| A list under the timeline | | `section` on the mechanic |
+| An edit to the encounters data | Data on `EncounterStore`/`EncounterRecord` (and `EncounterDataMessage.With`); a `StoreEdit<T>` per request type, listed in `StoreEditSet` | `AugurPage.ctx.send({ type, ... })` |
+| A user setting that changes analysis | A property on `ScanOptions`, filled in `ScanOptions.From`; read from `ScanContext.Options`; its edits return `changesScanOptions` | |
+| A tab, or a section per recorded encounter | | `AugurPage.register({ tabs, recordSection })` in its own folder under `web/` |
+| Rules the page must apply the same way as Core | A field on `PageConfigMessage`, built from the Core definition | Read `AugurPage.config`; never copy the rule into JS |
+
+The plugin (`EncounterBridge`) and `app.js` don't change for any of these. Each feature's page files still need a
+`<script>`/`<link>` line in `index.html`; the CLI page inlines whatever it lists.
+
+Event texts use all of them: `EventTextDetector` (mechanic), `EventTextRequests` and `EventTextStore`
+(store edits), `ScanOptions.EventTextBlacklist` (setting), `mechanics/eventtext.js` (timeline and section) and
+`web/eventtexts/` (dialogs, Blacklist tab, encounters data list). Their ACT triggers add `copy-trigger` and
+`import-trigger`, the only page requests that need ACT itself, so they live in the plugin (`ActTriggers`).
 
 ## Design rules
 
@@ -60,6 +87,12 @@ data and hosts the UI.
 
 **Don't block ACT's parse thread.** Analysis and encounter store writes run on one background thread, and results
 return to the UI thread through ACT's main form.
+
+**No real player names in the repository.** Docs, tests, code comments and data use made-up names (`Healerc`,
+`Tanka`, `Archerss`, `Selfy`, NPCs like `Bossy`) and never name a character: not other players, and not the
+user's own characters. Log examples copied from real fights get their player names replaced. Boss and NPC
+names are fine. Before committing, sweep new text against player names taken from the logs (the `players` of
+each fight in a CLI timeline page) and check that a made-up name doesn't occur in the logs.
 
 **Send JSON to the page, never HTML.** Log text includes player names and chat, so the page writes it with
 `textContent`, and a Content Security Policy limits it to bundled files.

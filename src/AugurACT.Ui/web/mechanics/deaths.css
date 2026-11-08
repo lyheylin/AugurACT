@@ -15,6 +15,6 @@
 .timeline .death { cursor: pointer; }
 .timeline .death .hit { fill: transparent; }
 .timeline .death .mark { stroke: var(--death); stroke-width: 2; stroke-linecap: round; fill: none; }
-.timeline .death.selected .hit { fill: none; stroke: var(--fg); stroke-width: 1.5; }
+.timeline .death.selected .hit { fill: transparent; stroke: var(--fg); stroke-width: 1.5; }
 .lines li.kind-death { color: var(--death); }
 .death-counts dt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }

@@ -6,7 +6,10 @@ and produces trigger regexes.
 
 **Status:** early. The first mechanic, barrage and bulwark, is detected end to end. The plugin tab lists
 ACT's encounters with their barrage counts; click one for its barrage timeline. "Update encounters data"
-records a fight under its zone and main NPCs, with its adds and which of them release barrages. Other analysis is not built yet. See [the plan](docs/PLAN.md).
+records a fight under its zone and main NPCs, with its adds and which of them release barrages. Each fight
+also lists its emotes, NPC speech and narration, grouped by text with variables like `{player}`; these can be
+added to a recorded encounter's event texts, or blacklisted, and given ACT triggers whose regexes match the
+line as the game wrote it (copy as ACT's XML, or import straight into ACT). Other analysis is not built yet. See [the plan](docs/PLAN.md).
 
 ## Requirements
 
@@ -44,7 +47,14 @@ dotnet run --project src/AugurACT.Cli -- barrage "/path/to/logs/" --since 2026-0
 dotnet run --project src/AugurACT.Cli -- deaths "/path/to/logs/" --since 2026-10-01
 ```
 
-These check one mechanic's rules across many logs. `barrage` prints, per boss, how many barrages were blocked,
+```sh
+dotnet run --project src/AugurACT.Cli -- texts "/path/to/logs/" --data AugurACT.encounters.json
+```
+
+This lists each fight's event texts (emotes, NPC speech and narration), grouped with their variables, leaving
+out what the encounters data file blacklists. `timeline` takes `--data` too. The output holds player names.
+
+`barrage` and `deaths` check one mechanic's rules across many logs. `barrage` prints, per boss, how many barrages were blocked,
 missed or cancelled, the warning time and how often it comes; `--catalog` adds new casts to the boss catalog,
 skipping any already recorded. `deaths` lists player deaths per log and per character, with their most common
 killers.

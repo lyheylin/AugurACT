@@ -157,7 +157,7 @@
           return `kind-hit${onTarget ? ' on-target' : ''}`;
         }
         return null;
-      });
+      }, fight.start);
     },
   });
 })();

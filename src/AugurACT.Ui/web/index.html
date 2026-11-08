@@ -9,6 +9,9 @@
   <!-- One stylesheet and one script per mechanic, in web/mechanics/. -->
   <link rel="stylesheet" href="mechanics/barrage.css">
   <link rel="stylesheet" href="mechanics/deaths.css">
+  <link rel="stylesheet" href="mechanics/eventtext.css">
+  <!-- One stylesheet and the scripts per page feature, in their own folder. -->
+  <link rel="stylesheet" href="eventtexts/eventtexts.css">
 </head>
 <body>
   <header class="top">
@@ -77,6 +80,8 @@
           <p class="cast-summary"></p>
           <ol class="cast-lines lines"></ol>
         </div>
+        <!-- Lists some mechanics add under the timeline. -->
+        <div class="sections"></div>
       </div>
       <!-- A column of folding panels, one per mechanic. -->
       <aside class="side" aria-label="Encounter details"></aside>
@@ -85,8 +90,14 @@
 
   <script src="util.js"></script>
   <script src="timeline.js"></script>
+  <script src="page.js"></script>
+  <script src="eventtexts/format.js"></script>
+  <script src="eventtexts/dialog.js"></script>
+  <script src="eventtexts/trigger.js"></script>
+  <script src="eventtexts/feature.js"></script>
   <script src="mechanics/barrage.js"></script>
   <script src="mechanics/deaths.js"></script>
+  <script src="mechanics/eventtext.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,8 +1,9 @@
 'use strict';
 
-// The page: the encounter list, its expanded detail (timeline, filter, legend, side panels), the update
-// dialog and the encounters data tab. Nothing here is about one mechanic: columns, panels, marks, legend
-// entries and detail text all come from the mechanics registered in web/mechanics/ (AugurTimeline.mechanics).
+// The page: the encounter list, its expanded detail (timeline, filter, legend, side panels, sections), the update
+// dialog and the encounters data tab. Nothing here is about one mechanic or feature: columns, panels, marks,
+// legend entries and detail text come from the mechanics in web/mechanics/ (AugurTimeline.mechanics); extra
+// tabs and encounters data sections come from the features registered with AugurPage (web/page.js).
 //
 // Encounters come from the plugin (ACT's encounter list, each analyzed on request into an EncounterSummary)
 // or, in the page the CLI writes, from an inline "timeline-report" whose fights carry the same summary.
@@ -43,6 +44,9 @@ function notice(text, isError) {
 function send(message) {
   host?.postMessage(message);
 }
+
+const features = window.AugurPage.features;
+window.AugurPage.ctx = { send, host: !!host, getData: () => encounterData };
 
 // ---- encounter list ----
 
@@ -166,6 +170,7 @@ function toggle(encounter) {
   buildFilter(detail);
   buildLegend(detail);
   buildPanels(detail);
+  buildSections(detail);
 
   expanded = { encounter, row: encounter.row, detailRow, detail, timeline: null };
   renderDetail();
@@ -199,6 +204,7 @@ function renderDetail() {
   expanded.timeline = null;
   detail.querySelector('.cast-detail').hidden = true;
   renderPanels(detail, summary);
+  renderSections();
 
   const fail = (text) => {
     message.textContent = text;
@@ -210,7 +216,7 @@ function renderDetail() {
   if (!summary) return fail('Analyzing this encounter…');
   const fight = fightOf(encounter);
   const lanes = window.AugurTimeline.lanesOf(summary);
-  if (!lanes.npcs.length && !lanes.players.length) return fail('Nothing to show for this encounter.');
+  if (!lanes.tops.length && !lanes.npcs.length && !lanes.players.length) return fail('Nothing to show for this encounter.');
 
   message.hidden = true;
   timelineHost.hidden = false;
@@ -220,7 +226,14 @@ function renderDetail() {
 
 function showItem(detail, mechanic, item, fight) {
   const box = detail.querySelector('.cast-detail');
+  // A second click on the selected mark clears it.
+  if (!item) {
+    box.hidden = true;
+    box.shownItem = null;
+    return;
+  }
   box.hidden = false;
+  box.shownItem = item;
   mechanic.showDetail({
     title: box.querySelector('.cast-title'),
     summary: box.querySelector('.cast-summary'),
@@ -295,6 +308,57 @@ function renderPanels(detail, summary) {
     if (!mechanic.panel) continue;
     const body = detail.querySelector(`.side-panel[data-panel="${mechanic.key}"] .side-body`);
     mechanic.panel.render(body, summary);
+  }
+}
+
+// ---- sections under the timeline: lists a mechanic shows in full ----
+
+function buildSections(detail) {
+  const host = detail.querySelector('.sections');
+  for (const mechanic of mechanics) {
+    if (!mechanic.section) continue;
+    const section = make('section', 'mech-section');
+    section.dataset.section = mechanic.key;
+    section.append(make('h3', null, mechanic.section.title), make('div', 'section-body'));
+    host.appendChild(section);
+  }
+}
+
+// Also run when the encounters data changes, since sections can show what's recorded.
+function renderSections() {
+  if (!expanded) return;
+  const { encounter, detail } = expanded;
+  const fight = fightOf(encounter);
+  for (const mechanic of mechanics) {
+    if (!mechanic.section) continue;
+    const body = detail.querySelector(`.mech-section[data-section="${mechanic.key}"] .section-body`);
+    mechanic.section.render(body, encounter.summary, {
+      encounter,
+      host: !!host,
+      start: fight.start,
+      // Redraws the timeline and the sections after a mechanic changed what it shows. Pass the item that
+      // went away to clear its detail if it's the one shown.
+      refresh(gone) {
+        const box = expanded?.detail.querySelector('.cast-detail');
+        if (gone && box?.shownItem === gone) {
+          box.hidden = true;
+          box.shownItem = null;
+          expanded.timeline?.select(null);
+        }
+        expanded?.timeline?.refresh();
+        renderSections();
+      },
+      // Selects an item on the timeline and shows its detail, as a click on its mark does; selecting the item
+      // already selected clears it, also as a mark does.
+      select(item) {
+        if (!expanded?.timeline) return;
+        if (expanded.timeline.selected() === item) item = null;
+        expanded.timeline.select(item);
+        showItem(expanded.detail, mechanic, item, fight);
+        if (!item) return;
+        expanded.detail.querySelector('.cast-detail').scrollIntoView({ block: 'nearest' });
+      },
+    });
   }
 }
 
@@ -471,6 +535,7 @@ function renderData() {
       cell.colSpan = headers.length;
       cell.appendChild(npcList('Bosses', record.bosses));
       cell.appendChild(npcList('Adds', record.adds));
+      for (const feature of features) if (feature.recordSection) cell.appendChild(feature.recordSection(record));
 
       const setOpen = (open) => {
         detail.hidden = !open;
@@ -526,8 +591,18 @@ function npcList(title, npcs) {
 function onEncounterData(data) {
   encounterData = data;
   renderData();
+  renderFeatureTabs();
+  renderSections();
+
+  // The blacklist changed: the plugin analyzes everything again; ask for the open one first.
+  if (data.reanalyzing && expanded) {
+    expanded.encounter.state = 'pending';
+    send({ type: 'analyze', id: expanded.encounter.id });
+  }
+
   if (data.updatedId == null) {
     if (data.error) notice(data.error, true);
+    else if (data.notice) notice(data.notice);
     return;
   }
 
@@ -551,16 +626,42 @@ $('data-filter').addEventListener('input', renderData);
 
 // ---- tabs ----
 
-function showTab(name) {
-  const data = name === 'data';
-  $('tab-encounters').setAttribute('aria-selected', String(!data));
-  $('tab-data').setAttribute('aria-selected', String(data));
-  $('encounters-view').hidden = data;
-  $('data-view').hidden = !data;
+// Encounters and Encounters data are the page's own; features add theirs after them.
+const featureTabs = features.flatMap((f) => f.tabs || []);
+const TABS = ['encounters', 'data', ...featureTabs.map((t) => t.key)];
+
+function buildFeatureTabs() {
+  const nav = document.querySelector('.tabs');
+  let after = $('data-view');
+  for (const tab of featureTabs) {
+    const button = make('button', null, tab.label);
+    Object.assign(button, { type: 'button', id: `tab-${tab.key}` });
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', 'false');
+    button.setAttribute('aria-controls', `${tab.key}-view`);
+    nav.appendChild(button);
+    const view = make('section');
+    Object.assign(view, { id: `${tab.key}-view`, hidden: true });
+    view.setAttribute('role', 'tabpanel');
+    view.setAttribute('aria-labelledby', button.id);
+    after.after(view);
+    after = view;
+  }
 }
 
-$('tab-encounters').addEventListener('click', () => showTab('encounters'));
-$('tab-data').addEventListener('click', () => showTab('data'));
+function renderFeatureTabs() {
+  for (const tab of featureTabs) tab.render($(`${tab.key}-view`));
+}
+
+function showTab(name) {
+  for (const tab of TABS) {
+    $(`tab-${tab}`).setAttribute('aria-selected', String(tab === name));
+    $(`${tab}-view`).hidden = tab !== name;
+  }
+}
+
+buildFeatureTabs();
+for (const tab of TABS) $(`tab-${tab}`).addEventListener('click', () => showTab(tab));
 
 // ---- data sources ----
 
@@ -607,10 +708,12 @@ if (host) {
 
   host.addEventListener('message', (event) => {
     const data = event.data;
-    if (data.type === 'encounters') onEncounters(data);
+    if (data.type === 'config') window.AugurPage.config = data;
+    else if (data.type === 'encounters') onEncounters(data);
     else if (data.type === 'analysis') onAnalysis(data);
     else if (data.type === 'encounter-npcs') onEncounterNpcs(data);
     else if (data.type === 'encounter-data') onEncounterData(data);
+    else if (data.type === 'notice') notice(data.text, data.error);
   });
   send({ type: 'ready' });
 }
@@ -619,6 +722,7 @@ if (host) {
 const inline = document.getElementById('augur-data');
 if (inline) {
   const report = JSON.parse(inline.textContent);
+  window.AugurPage.config = report.config;
   $('page-title').textContent = report.title || 'AugurACT';
   document.title = report.title || 'AugurACT';
   const list = report.fights.map((f, i) => {

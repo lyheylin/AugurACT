@@ -1,0 +1,102 @@
+/* Event texts everywhere outside the timeline: their colours and swatches, templates drawn with variable chips,
+   the lists on the Encounters data and Blacklist tabs, the add / edit / blacklist dialog, and triggers (their rows
+   under a text, and their dialog). The timeline's
+   marks and its list are in mechanics/eventtext.css. */
+:root {
+  --et-emote: #b5631d;
+  --et-say: #2c8a8a;
+  --et-narration: #a23d7a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --et-emote: #e39a55;
+    --et-say: #5cc4c4;
+    --et-narration: #db7ab5;
+  }
+}
+
+.et-swatch { display: inline-block; width: 9px; height: 9px; flex: none; }
+.et-swatch.et-emote { background: var(--et-emote); transform: rotate(45deg) scale(0.85); }
+.et-swatch.et-say { background: var(--et-say); border-radius: 50%; }
+.et-swatch.et-narration { background: var(--et-narration); }
+
+/* A template with its variables as chips. */
+.et-text { white-space: pre-wrap; word-break: break-word; }
+.et-var { display: inline-block; padding: 0 4px; border-radius: 3px; background: var(--selected); color: var(--accent); font: 600 11px/1.5 Consolas, "Cascadia Mono", monospace; }
+.et-kind { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--muted); font-size: 12px; }
+.cast-title .et-kind { vertical-align: middle; margin-right: 4px; }
+
+/* Lists of event texts: shared by the list under the timeline, each encounter's list and the blacklist. */
+.et-table { width: 100%; }
+.et-table td { vertical-align: top; }
+.et-table td.et-text-cell { white-space: normal; width: 100%; }
+.et-values { font-size: 11px; margin-top: 1px; }
+.et-actions { text-align: right; }
+.et-actions button { padding: 1px 8px; font-size: 12px; margin-left: 4px; }
+.et-description { font-size: 12px; color: var(--muted); white-space: pre-wrap; margin-top: 1px; }
+.et-description::before { content: "\201C"; }
+.et-description::after { content: "\201D"; }
+.et-list { margin: 6px 0 4px; }
+.et-list h4 { display: flex; align-items: center; gap: 10px; margin: 4px 0 2px; font-size: 12px; }
+.et-list td { padding: 2px 8px; }
+.et-list h4 .et-add, .data-head .et-add { padding: 0 8px; font-size: 12px; font-weight: normal; }
+.et-list .et-table { min-width: 0; width: 100%; }
+#blacklist-view .data-head { justify-content: space-between; }
+
+/* Add / blacklist dialog. */
+#text-dialog { width: min(680px, calc(100vw - 32px)); }
+.text-field { display: flex; flex-direction: column; gap: 3px; }
+.text-field > span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.text-field select, .text-field input { font: inherit; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+#text-input { font: 12px/1.5 Consolas, "Cascadia Mono", monospace; }
+.text-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.text-row .text-field { flex: 1 1 200px; }
+.et-chips { padding: 6px 8px; border: 1px dashed var(--rule); border-radius: 4px; background: var(--panel); white-space: pre-wrap; word-break: break-word; min-height: 2em; }
+.et-chip { padding: 0 3px; margin: 0 1px; border: 0; border-bottom: 1.5px dashed var(--accent); border-radius: 0; background: transparent; font: inherit; color: var(--fg); }
+.et-chip.variable { border: 0; border-radius: 3px; padding: 0 4px; background: var(--selected); color: var(--accent); font: 600 11px/1.5 Consolas, "Cascadia Mono", monospace; }
+.et-chip:disabled { color: inherit; cursor: default; }
+.et-chip.variable:disabled { color: var(--accent); }
+#text-seen { font-size: 12px; color: var(--muted); display: grid; gap: 2px; }
+#text-error, #text-check.error { color: var(--error); }
+#text-check, #text-error { font-size: 12px; min-height: 1.4em; }
+.text-field textarea { font: inherit; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); resize: vertical; }
+.et-timer-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.et-timer-values { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.et-timer-values input { font: 12px/1.4 Consolas, "Cascadia Mono", monospace; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.et-timer-values.off { opacity: 0.45; }
+
+/* A text's triggers, as rows under it. */
+.et-table tr.et-trigger-row td { padding-top: 0; border-top: 0; }
+.et-trigger-tag { display: inline-block; margin-left: 14px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.et-trigger-tag::before { content: "\21B3\00A0"; }
+.et-trigger-cell { white-space: normal; }
+.et-regex { font: 11px/1.5 Consolas, "Cascadia Mono", monospace; word-break: break-all; }
+.et-trigger-info { font-size: 11px; }
+
+/* Trigger dialog. */
+#trigger-dialog { width: min(680px, calc(100vw - 32px)); }
+#trigger-dialog input[type="text"] { font: inherit; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+#trigger-dialog input:disabled { opacity: 0.5; }
+#trigger-regex, #trigger-tts { font: 12px/1.5 Consolas, "Cascadia Mono", monospace !important; }
+.trigger-text { padding: 6px 8px; border: 1px dashed var(--rule); border-radius: 4px; background: var(--panel); }
+.trigger-sound { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.trigger-sound label { display: inline-flex; align-items: center; gap: 4px; }
+.trigger-sound input[type="text"] { flex: 1 1 220px; }
+.trigger-row { display: flex; gap: 8px; align-items: flex-end; }
+.trigger-row .text-field { flex: 1; }
+.trigger-checks { display: flex; gap: 16px; flex-wrap: wrap; }
+.trigger-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+#trigger-check, #trigger-error { font-size: 12px; min-height: 1.4em; }
+#trigger-check.error, #trigger-error { color: var(--error); }
+.et-table tr:has(+ tr.et-trigger-row) td { border-bottom-color: transparent; }
+#trigger-encounter-hint:empty, #trigger-groups:empty { display: none; }
+.trigger-you { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 4px; }
+.trigger-you[hidden] { display: none; }
+.trigger-you-title { font-size: 12px; color: var(--muted); font-weight: 600; }
+.trigger-you-groups { display: flex; flex-direction: column; gap: 2px; }
+.trigger-you-group code { font: 600 11px/1.5 Consolas, "Cascadia Mono", monospace; padding: 0 4px; border-radius: 3px; background: var(--selected); color: var(--accent); }
+.trigger-you-group.is-you code { background: var(--accent); color: var(--bg); }
+.trigger-you-row { display: flex; gap: 10px; align-items: center; }
+.trigger-you-row .hint { margin: 0; }
+.trigger-you-row button { white-space: nowrap; }

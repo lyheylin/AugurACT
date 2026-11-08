@@ -78,6 +78,11 @@ Built end to end ahead of the phases below, to test the approach on a mechanic c
 - [x] A lane for every player in the encounter, from ACT's ally list, whether or not anything happened to them.
 - [x] Mechanics are self-contained: a Core detector registered in `MechanicSet`, and a JS and CSS file in
       `web/mechanics/` (see Adding a mechanic).
+- [x] Event texts: emotes, NPC speech and narration on the timeline, grouped by text with `{player}`, `{class}`,
+      `{archetype}` and `{number}` variables; added to an encounter's event texts in the encounters data, or
+      blacklisted (Blacklist tab). See Mechanics.
+- [x] ACT triggers for event texts: regexes built from the log line as the game wrote it, saved under the text in
+      the encounters data, and copied as ACT's XML or imported into ACT.
 - [ ] Verify in ACT (see below).
 
 ### Phase 2: Fight segmentation
@@ -122,7 +127,7 @@ Common mechanics come first, each built the same way as barrage (see [Adding a m
 then encounter-specific ones.
 
 1. Identify specific logs and encounters to use as references, with their known mechanics. Barrage and
-   bulwark is done; the Oct 12 Peris K'dal fight in Shanown's log is a reference for group misses.
+   bulwark is done; the Oct 12 Peris K'dal group fight is a reference for group misses.
 2. List common patterns seen in those fights that rules can target.
 
 ## Verify in ACT
@@ -145,6 +150,10 @@ These can't be checked without running inside ACT:
       count), and no NPCs.
 - [ ] The main NPC dialog lists the fight's enemies, and no players or pets. Saving writes
       `%APPDATA%\Advanced Combat Tracker\Config\AugurACT.encounters.json`.
+- [ ] Event texts: ACT's ally list makes player names variables; "Add +" finds the recorded encounter;
+      blacklisting Heroic Surge removes it from every fight after re-analysis, and un-blacklisting brings it back.
+- [ ] Triggers: an imported trigger shows in ACT's Custom Triggers under its category and fires on the next
+      line (TTS speaks `${player}`); pasting copied XML into ACT imports the same trigger.
 
 ## Open questions
 

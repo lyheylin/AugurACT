@@ -1,0 +1,30 @@
+/* Event texts on the timeline: marks per kind, their log line colours, and the list under the timeline.
+   Colours, swatches and chips are shared with the rest of the feature, in eventtexts/eventtexts.css. */
+.timeline .event-text { cursor: pointer; }
+.timeline .event-text .hit { fill: transparent; }
+.timeline .et-emote .mark { fill: var(--et-emote); }
+.timeline .et-say .mark { fill: var(--et-say); }
+.timeline .et-narration .mark { fill: var(--et-narration); }
+.timeline .event-text.selected .mark { stroke: var(--fg); stroke-width: 1.5; }
+.timeline .event-text.selected .hit { fill: transparent; stroke: var(--fg); stroke-width: 1; }
+/* From a mark down to each player the event names. Faint until its text is selected. */
+.timeline .et-ref { cursor: pointer; opacity: 0.35; }
+.timeline .et-ref.selected { opacity: 1; }
+.timeline .et-ref .ref-line { stroke-width: 1; stroke-dasharray: 2 2; }
+.timeline .et-ref.selected .ref-line { stroke-width: 1.5; stroke-dasharray: none; }
+.timeline .et-emote .ref-line { stroke: var(--et-emote); }
+.timeline .et-say .ref-line { stroke: var(--et-say); }
+.timeline .et-narration .ref-line { stroke: var(--et-narration); }
+.timeline .et-emote .ref-end { fill: var(--et-emote); }
+.timeline .et-say .ref-end { fill: var(--et-say); }
+.timeline .et-narration .ref-end { fill: var(--et-narration); }
+.lines li.kind-et-emote { color: var(--et-emote); }
+.lines li.kind-et-say { color: var(--et-say); }
+.lines li.kind-et-narration { color: var(--et-narration); }
+
+.et-fight tr.et-row { cursor: pointer; }
+.et-fight tr.et-row:hover { background: var(--hover); }
+.et-fight tr.et-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.et-fight { max-height: none; }
+.et-removed { margin-top: 6px; }
+button.et-recorded { color: var(--check); border-color: var(--check); }

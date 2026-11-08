@@ -88,9 +88,10 @@ Everything for one mechanic lives in two files, `web/mechanics/<name>.js` and `w
 | `columns` | Count columns in the encounter list: `{ header, value(summary), className }`. |
 | `items(summary)` | Its results, for `#select=<key>:<n>` links. |
 | `times(summary)` | Epochs that widen the timeline when they fall outside ACT's start and end. |
-| `npcLanes(summary)`, `playerLanes(summary)` | Lanes it needs. Player lanes always include everyone in `summary.players`. |
-| `draw(summary, api)` | Its marks. `api` gives `x(epoch)`, `npcLane(name)`, `playerLane(name)`, `el()`, `clock()`, `isSelected()` and `selectable(node, item)`. |
+| `topLanes(summary)`, `npcLanes(summary)`, `playerLanes(summary)` | Lanes it needs. Top lanes are shared lanes above the NPCs, for events with no speaker (event texts' "Narration"). Player lanes always include everyone in `summary.players`. |
+| `draw(summary, api)` | Its marks. `api` gives `x(epoch)`, `topLane(name)`, `npcLane(name)`, `playerLane(name)`, `el()`, `clock()`, `isSelected()` and `selectable(node, item)`. |
 | `panel: { title, render(body, summary) }` | Its folding panel on the right. `summary` is null while analysis runs. |
+| `section: { title, render(body, summary, ctx) }` | Optional full-width list under the timeline. `ctx` gives `encounter`, `host` (running in the plugin), `start`, `select(item)`, which selects an item as a click on its mark does, and `refresh(gone)`, which redraws the timeline and sections after the mechanic changed what it shows (and closes `gone`'s detail if it's open). Rendered again when the encounters data changes. |
 | `showDetail(view, item, fight)` | The box under the timeline when a mark is clicked: fill `view.title`, `view.summary`, `view.lines` (`AugurUtil.fillLines`). |
 | `dataFlag` | Optional yes/no column on the Encounters data tab: `{ header, field, describe(name) }`. |
 
@@ -103,6 +104,10 @@ Only if the mechanic is a per-NPC trait worth remembering: add a flag to `NpcRec
 `src/AugurACT.Core/Mechanics/EncounterStore.cs` and set it in `Update` from the casts, and give the mechanic a
 `dataFlag` in its JS file. Flags only turn on, never off. Add a column for it to the encounter and boss/add tables on the
 Encounters data tab. Don't put mechanic counts in the "updated" message; the store is mechanic-neutral.
+
+If the user edits something per encounter (like event texts), see the extension points in
+[Architecture](ARCHITECTURE.md#extension-points): store edits go in `StoreEditSet`, settings that change
+analysis in `ScanOptions`, and page tabs or data sections in `AugurPage.register`.
 
 ## 8. ACT pitfalls already hit
 
