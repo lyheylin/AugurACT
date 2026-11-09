@@ -2,9 +2,9 @@
 
 // ACT triggers for event texts: the dialog that makes one, and the rows that show an event text's triggers under
 // it, with Edit (the same dialog, filled in), Copy (ACT's XML on the clipboard), Import (straight into ACT's custom
-// triggers) and a remove cross. Triggers are
-// saved under the text in the encounters data (EventTrigger in Core); the regex starts as the one Core built from
-// the text's log line (TriggerRegex), which matches the line as the game wrote it, markup included.
+// triggers) and a remove cross. Triggers are saved under the text in the encounters data (EventTrigger in Core);
+// the regex starts as the one Core built from the text's log line (TriggerRegex), which matches the line as the
+// game wrote it, markup included.
 //
 // A {player} group can be swapped to ACT's YOU group: ACT then fires the trigger only when that group holds the
 // character name of whoever is logging, in any case (ACT 3.2.1.251; FormActMain.ParseCustomSingle). The literal
@@ -362,24 +362,17 @@
         ? () => ctx().send({ type: 'remove-event-trigger', zone: record.zone, name: record.name, text: entry.text, trigger })
         : null);
       if (!host) continue;
-      const edit = make('button', null, 'Edit');
-      edit.type = 'button';
-      edit.title = 'Change the trigger’s regex, alert and settings';
-      edit.addEventListener('click', (event) => {
-        event.stopPropagation();
-        open({ record, entry, trigger });
-      });
-      actions.appendChild(edit);
-      for (const [label, title, message] of [
-        ['Copy', 'Copy the trigger as ACT’s XML, to paste into ACT or share', { type: 'copy-trigger', trigger }],
-        ['Import', 'Add the trigger to ACT’s custom triggers', { type: 'import-trigger', trigger }],
+      for (const [label, title, run] of [
+        ['Edit', 'Change the trigger’s regex, alert and settings', () => open({ record, entry, trigger })],
+        ['Copy', 'Copy the trigger as ACT’s XML, to paste into ACT or share', () => ctx().send({ type: 'copy-trigger', trigger })],
+        ['Import', 'Add the trigger to ACT’s custom triggers', () => ctx().send({ type: 'import-trigger', trigger })],
       ]) {
         const button = make('button', null, label);
         button.type = 'button';
         button.title = title;
         button.addEventListener('click', (event) => {
           event.stopPropagation();
-          ctx().send(message);
+          run();
         });
         actions.appendChild(button);
       }

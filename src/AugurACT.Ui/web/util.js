@@ -78,7 +78,8 @@ window.AugurUtil = (() => {
     return box;
   }
 
-  // Every remove on the page: a small red cross, at the very end of its row. title says what it removes.
+  // Every remove on the page is a small red cross at the very end of its row (removeCell). title says what it
+  // removes.
   function removeButton(title, run) {
     const button = make('button', 'remove-x', '\u00D7');
     button.type = 'button';
@@ -99,5 +100,5 @@ window.AugurUtil = (() => {
     return cell;
   }
 
-  return { make, time, clock, damage, fmtSeconds, median, plural, escapeRegex, fillLines, orderButtons, removeButton, removeCell };
+  return { make, time, clock, damage, fmtSeconds, median, plural, escapeRegex, fillLines, orderButtons, removeCell };
 })();

@@ -10,7 +10,7 @@
 //
 // Log text holds player names and chat, so everything from it is written with textContent.
 
-const { make, damage, plural } = window.AugurUtil;
+const { make, damage, plural, removeCell } = window.AugurUtil;
 const mechanics = window.AugurTimeline.mechanics;
 const host = window.chrome?.webview;
 const encounters = new Map(); // id -> encounter
@@ -587,7 +587,7 @@ function npcList(title, npcs, remove = null) {
       cell.className = 'center';
       cell.appendChild(checkbox(npc[flag.field], flag.describe(npc.name)));
     }
-    if (remove) window.AugurUtil.removeCell(row, `Remove ${npc.name} from the adds`, () => remove(npc));
+    if (remove) removeCell(row, `Remove ${npc.name} from the adds`, () => remove(npc));
   }
   box.appendChild(table);
   return box;

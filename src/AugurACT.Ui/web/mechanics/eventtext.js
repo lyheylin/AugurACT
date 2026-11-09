@@ -8,7 +8,7 @@
 // steady timer (EventTextTimer in Core) shows its interval. A line that names players drops a line from its mark
 // to each of their lanes, ending in a dot. Data: summary.eventTexts (EventTextGroup).
 (() => {
-  const { make, fillLines, plural } = window.AugurUtil;
+  const { make, fillLines, plural, removeCell } = window.AugurUtil;
   const texts = window.AugurEventTexts;
   const NARRATION = 'Narration';
 
@@ -184,7 +184,7 @@
           }
 
           const columns = row.cells.length;
-          window.AugurUtil.removeCell(row, 'Take this text off this fight\u2019s list and timeline, without blacklisting it', () => {
+          removeCell(row, 'Take this text off this fight\u2019s list and timeline, without blacklisting it', () => {
             if (!removed.has(fightKey(s))) removed.set(fightKey(s), new Set());
             removed.get(fightKey(s)).add(groupKey(group));
             ctx.refresh(group);

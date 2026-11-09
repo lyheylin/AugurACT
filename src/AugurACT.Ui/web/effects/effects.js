@@ -9,7 +9,7 @@
 // Images load from their own host (AugurPage.config.effectImages). The up / down arrows order the list
 // ("move-effect"), and descriptions and notes show {Name} references (refs.js).
 (() => {
-  const { make, plural, orderButtons } = window.AugurUtil;
+  const { make, plural, orderButtons, removeCell } = window.AugurUtil;
   const ctx = () => window.AugurPage.ctx;
   const { text: withRefs, imageUrl, KINDS } = window.AugurEffectRefs;
 
@@ -69,7 +69,7 @@
       order.className = 'order-cell';
       order.appendChild(orderButtons(index, effects.length,
         (offset) => ctx().send({ type: 'move-effect', zone: record.zone, name: record.name, effect: effect.name, offset }), 'this effect'));
-      window.AugurUtil.removeCell(row, `Remove ${effect.name} from ${record.name}`, () => {
+      removeCell(row, `Remove ${effect.name} from ${record.name}`, () => {
         if (confirm(`Remove ${effect.name} from ${record.name}?`)) ctx().send({ type: 'remove-effect', zone: record.zone, name: record.name, effect: effect.name });
       });
     }

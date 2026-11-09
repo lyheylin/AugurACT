@@ -49,14 +49,14 @@
     host.appendChild(head);
     host.appendChild(entryTable(data?.blacklist || [], {
       empty: 'Nothing blacklisted.',
-      actions: () => [],
       remove: (entry) => ['Take off the blacklist and list this text again', () => ctx().send({ type: 'unblacklist-event-text', text: entry.text })],
     }));
   }
 
   // actions(entry) gives its buttons, and remove(entry) its remove cross as [title, run], last in the row.
-  // children(body, entry, columns), when given, adds rows under each entry's own, each ending in a remove cell. record is the encounter the entries belong to, where their descriptions' {effect} references are looked
-  // up first. move(entry, offset), when given, adds the up / down arrows that order the list.
+  // children(body, entry, columns), when given, adds rows under each entry's own, each ending in a remove cell.
+  // record is the encounter the entries belong to, where their descriptions' {effect} references are looked up
+  // first. move(entry, offset), when given, adds the up / down arrows that order the list.
   function entryTable(entries, { empty, withDetails = false, actions, remove, children, record = null, move = null }) {
     if (!entries.length) return make('p', 'muted', empty);
     const table = make('table', 'et-table');
@@ -95,7 +95,7 @@
       const [removeTitle, removeRun] = (ctx()?.host && remove?.(entry)) || [];
       removeCell(row, removeTitle, removeRun);
       if (!ctx()?.host) continue;
-      for (const [label, title, run] of actions(entry)) {
+      for (const [label, title, run] of actions?.(entry) || []) {
         const button = make('button', null, label);
         button.type = 'button';
         button.title = title;

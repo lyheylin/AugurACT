@@ -86,8 +86,8 @@ namespace AugurACT.Core.EventTexts
             return textAdded ? TriggerSaved.AddedWithText : TriggerSaved.Added;
         }
 
-        // Swaps a trigger of an encounter's event text, found as the same as original in every setting, for the edited
-        // one, in its place and keeping when it was added. False when nothing changed.
+        // Replaces the trigger of an encounter's event text that is the same as original in every setting with the
+        // edited one, in the same place and keeping its added date. False when nothing changed.
         public static bool EditTrigger(this EncounterStore store, string? zone, string? name, string? text, EventTrigger original, EventTrigger edited)
         {
             var record = store.FindByName(zone, name)?.EventTexts.FirstOrDefault(t => Same(t.Text, text))
@@ -98,19 +98,20 @@ namespace AugurACT.Core.EventTexts
                 throw new ArgumentException("That trigger isn't in the encounters data any more.");
             }
 
+            var triggers = record.Triggers!;
             var checkedTrigger = edited.Checked();
-            if (record.Triggers![index].SameAs(checkedTrigger))
+            if (triggers[index].SameAs(checkedTrigger))
             {
                 return false;
             }
 
-            if (record.Triggers.Where((t, i) => i != index).Any(t => t.SameAs(checkedTrigger)))
+            if (triggers.Where((t, i) => i != index).Any(t => t.SameAs(checkedTrigger)))
             {
                 throw new ArgumentException("The text already has a trigger like that.");
             }
 
-            checkedTrigger.Added = record.Triggers[index].Added;
-            record.Triggers[index] = checkedTrigger;
+            checkedTrigger.Added = triggers[index].Added;
+            triggers[index] = checkedTrigger;
             return true;
         }
 
