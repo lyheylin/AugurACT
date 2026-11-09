@@ -100,8 +100,18 @@ public class TriggerTests
         var regex = TriggerRegex.Build("say", "Bossy says, \"Who (dares) [enter] my lair? $5... +1 {{x}}|y^\"", line);
 
         Assert.True(regex.FromLine);
-        Assert.Equal(@"Bossy\\/a says, ""Who \(dares\) \[enter\] my lair\? \$5\.\.\. \+1 \{x\}\|y\^""", regex.Pattern);
+        Assert.Equal(@"Bossy\\/a says, \""Who \(dares\) \[enter\] my lair\? \$5\.\.\. \+1 \{x\}\|y\^\""", regex.Pattern);
         MatchesLog(regex.Pattern, line);
+    }
+
+    [Fact]
+    public void QuotesAreEscapedWithoutALineToo()
+    {
+        var regex = TriggerRegex.Build("say", "Bossy says, \"Kneel* before me!\"", null, new[] { "Bossy" });
+
+        Assert.False(regex.FromLine);
+        Assert.Equal(@"Bossy\\/a says, \""Kneel\* before me!\""", regex.Pattern);
+        Assert.Matches(regex.Pattern, @"\aNPC 1 Bossy:Bossy\/a says, ""Kneel* before me!""");
     }
 
     [Fact]

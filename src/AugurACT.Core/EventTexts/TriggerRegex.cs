@@ -28,9 +28,11 @@ namespace AugurACT.Core.EventTexts
         private const RegexOptions Options = RegexOptions.CultureInvariant;
         private static readonly Regex Markup = new Regex(@"\\#[0-9A-Fa-f]{6}|\\a(?<type>[A-Z]+) -?\d+ [^\\]*?:|\\/a", Options);
 
-        // Characters with a meaning in a .NET regex. Everything else is written as it is, so the regex reads like
-        // the line (Regex.Escape would also escape spaces and #).
-        private const string Special = @"\*+?|{}[]()^$.";
+        // Characters escaped in a trigger's regex: those with a meaning in a .NET regex, and the double quote, which
+        // ACT's trigger handling needs escaped (NPC speech is quoted). Everything else is written as it is, so the
+        // regex reads like the line. Regex.Escape would also escape # and white space, which only mean something
+        // under RegexOptions.IgnorePatternWhitespace; ACT doesn't use it.
+        private const string Special = "\\*+?|{}[]()^$.\"";
 
         private TriggerRegex(string pattern, bool fromLine)
         {

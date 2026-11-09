@@ -156,7 +156,7 @@ it, so markup must be in place. Each occurrence keeps its line (`raw`), and the 
 - The NPC link at the start is dropped up to the name, since its id changes per spawn; a link later in the line
   keeps `\\aPC -?\d+ [^\\]*?:` for it. Colour codes stay as written, also mid-line (Heroic Surge).
 - Each variable is a named group, numbered from the second of a kind (`player`, `player2`), so TTS can say
-  `${player}`. Only regex characters are escaped; spaces and `#` stay readable.
+  `${player}`. Regex characters and `"` are escaped; spaces and `#` stay readable.
 - No anchors: ACT's line starts with the time stamp.
 - **The YOU group.** In the trigger dialog, any `player` group (or several) can be checked and swapped to
   `(?<YOU>...)`, and back; TTS `${player}` follows the rename. ACT (since 3.2.1.251; `ParseCustomSingle`) drops
