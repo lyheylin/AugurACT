@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AugurACT.Core.Effects;
 using AugurACT.Core.EventTexts;
 using AugurACT.Core.Mechanics;
 
@@ -14,6 +15,7 @@ namespace AugurACT.Core.Host
     {
         public static readonly IReadOnlyList<IStoreEdit> All = new IStoreEdit[0]
             .Concat(EventTextRequests.All)
+            .Concat(EffectRequests.All)
             .ToList();
 
         private static readonly Dictionary<string, IStoreEdit> ByType = All.ToDictionary(e => e.Type, StringComparer.Ordinal);

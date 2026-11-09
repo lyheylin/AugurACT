@@ -70,6 +70,11 @@ See [Mechanics](MECHANICS.md) for how they're detected.
       blacklisted (Blacklist tab). See Mechanics.
 - [x] ACT triggers for event texts: regexes built from the log line as the game wrote it, saved under the text in
       the encounters data, and copied as ACT's XML or imported into ACT.
+- [x] Buffs and detrimentals per recorded encounter, kept by hand: name, icon, description, notes, screenshots.
+      A pasted tooltip screenshot fills in the icon, name and description (Windows OCR, as a draft).
+- [x] `{Name}` in event text descriptions and effect descriptions and notes refers to a recorded effect; hovering
+      it shows the effect as a game-style tooltip built from the entry.
+- [x] Up / down arrows order each encounter's event texts and buffs and detrimentals by hand.
 - [ ] Verify in ACT (see below).
 
 ### Phase 2: Fight segmentation
@@ -140,6 +145,8 @@ These can't be checked without running inside ACT:
       `%APPDATA%\Advanced Combat Tracker\Config\AugurACT.encounters.json`.
 - [ ] Event texts: ACT's ally list makes player names variables; "Add +" finds the recorded encounter;
       blacklisting Heroic Surge removes it from every fight after re-analysis, and un-blacklisting brings it back.
+- [ ] Buffs and detrimentals: a pasted (Ctrl+V) or dropped screenshot is read inside ACT, its images show from
+      `augur-images.act`, and `Config\AugurACT.images\` only keeps images an effect names (after a day).
 - [ ] Triggers: an imported trigger shows in ACT's Custom Triggers under its category and fires on the next
       line (TTS speaks `${player}`); pasting copied XML into ACT imports the same trigger.
 

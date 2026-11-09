@@ -141,7 +141,7 @@
           const vars = variables(group);
           if (vars.length) cell.appendChild(make('div', 'muted et-values', vars.join(' · ')));
           const entry = ctx.host ? texts.recordedEntry(record, group) : null;
-          if (entry?.description) cell.appendChild(make('div', 'et-description', entry.description));
+          if (entry?.description) cell.appendChild(window.AugurEffectRefs.text(entry.description, record, 'et-description'));
           Object.assign(row.insertCell(), { className: 'num', textContent: String(group.occurrences.length) });
           Object.assign(row.insertCell(), { className: 'num', textContent: window.AugurUtil.clock(group.occurrences[0].at - ctx.start) });
           const timer = row.insertCell();

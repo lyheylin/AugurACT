@@ -5,12 +5,14 @@
 ```
 src/AugurACT.Core      netstandard2.0   Log parsing and analysis. No ACT or UI references.
 src/AugurACT.Plugin    net48            ACT entry point. Builds AugurACT.dll. Must stay minimal (see below).
-src/AugurACT.Ui        net48            WebView2 host control.
+src/AugurACT.Ui        net48            WebView2 host control, and reading effect screenshots (EffectImageReader, Windows OCR).
 src/AugurACT.Ui/web                     The page shown in the plugin tab. The CLI inlines it into a standalone page.
 src/AugurACT.Ui/web/mechanics           One .js and one .css per mechanic: its columns, marks, panel, section and legend.
 src/AugurACT.Ui/web/page.js             AugurPage: registry for page features (tabs, encounters data sections).
 src/AugurACT.Ui/web/eventtexts          One page feature: format.js (templates, timers), dialog.js, trigger.js, feature.js, css.
+src/AugurACT.Ui/web/effects             Buffs and detrimentals: each encounter's list and the add / edit dialog.
 src/AugurACT.Core/EventTexts            Event texts in Core: detector, template format, timer, trigger regex and XML, store edits, requests.
+src/AugurACT.Core/Effects               Buffs and detrimentals in Core: records, store edits, image folder, tooltip icon and text.
 src/AugurACT.Cli       net10.0          Runs Core over saved log files to tune rules. Runs on Linux/WSL.
 data/boss-mechanics.json                Boss catalog built by the CLI. Holds no player names.
 tests/AugurACT.Core.Tests  net10.0      xUnit tests for Core. Runs on Linux/WSL.
@@ -35,7 +37,8 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 | `encounter-npcs` (id) | `encounter-npcs`: the fight's enemy NPCs, most damage taken first |
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
 | `copy-trigger`, `import-trigger` (trigger) | `notice`. Handled on the UI thread (`ActTriggers`): ACT's XML on the clipboard, or `AddEditCustomTrigger` |
-| Any edit in `StoreEditSet` (today: `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`, `add-event-trigger`, `remove-event-trigger`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
+| `add-effect-image` (requestId, data, asIcon) | `effect-image`: the image saved in the images folder, and for a screenshot the icon cut from it and the text read (`EffectImageReader`, on the worker thread) |
+| Any edit in `StoreEditSet` (today: `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`, `add-event-trigger`, `remove-event-trigger`, `move-event-text`, `save-effect`, `remove-effect`, `move-effect`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
 
 A newly ended encounter arrives as `encounters` with `replace: false`. After a list, the plugin analyzes every
 encounter in the background, newest first; requests from the page go ahead of that queue. Encounter ids are
@@ -69,6 +72,7 @@ Each kind of addition has one place to register, so a feature lives in its own f
 | An edit to the encounters data | Data on `EncounterStore`/`EncounterRecord` (and `EncounterDataMessage.With`); a `StoreEdit<T>` per request type, listed in `StoreEditSet` | `AugurPage.ctx.send({ type, ... })` |
 | A user setting that changes analysis | A property on `ScanOptions`, filled in `ScanOptions.From`; read from `ScanContext.Options`; its edits return `changesScanOptions` | |
 | A tab, or a section per recorded encounter | | `AugurPage.register({ tabs, recordSection })` in its own folder under `web/` |
+| A plugin message only one feature reads | A message class in `HostMessages` | `messages: { type: handler }` in `AugurPage.register` |
 | Rules the page must apply the same way as Core | A field on `PageConfigMessage`, built from the Core definition | Read `AugurPage.config`; never copy the rule into JS |
 
 The plugin (`EncounterBridge`) and `app.js` don't change for any of these. Each feature's page files still need a
@@ -78,6 +82,23 @@ Event texts use all of them: `EventTextDetector` (mechanic), `EventTextRequests`
 (store edits), `ScanOptions.EventTextBlacklist` (setting), `mechanics/eventtext.js` (timeline and section) and
 `web/eventtexts/` (dialogs, Blacklist tab, encounters data list). Their ACT triggers add `copy-trigger` and
 `import-trigger`, the only page requests that need ACT itself, so they live in the plugin (`ActTriggers`).
+
+Buffs and detrimentals are a store edit and a record section too (`EffectRequests`, `web/effects/`), plus images.
+These live in `Config\AugurACT.images\`, named by a hash of their bytes, and the page loads them from a second
+virtual host, `https://augur-images.act/`. A screenshot is saved as soon as it is added to the dialog, so images
+no effect names are pruned a day later, when the plugin first loads the store. Its icon is found by
+`TooltipLayout` (the biggest square patch of colour that isn't text or frame), and its text is read with Windows'
+own OCR (`Windows.Media.Ocr`, through the `Microsoft.Windows.SDK.Contracts` reference package, which ships no
+files) and tidied by `TooltipText`. OCR on these tooltips is a draft: words are mostly right, long numbers often
+aren't.
+
+Event texts and effects stay in the order the user gives them: new ones go at the end, and the up / down arrows
+(`AugurUtil.orderButtons`) send `move-event-text` and `move-effect`, which `ListOrder.Move` applies.
+
+Descriptions and notes can refer to an effect as `{Name}`: `effects/refs.js` (`AugurEffectRefs.text`) writes any
+such text with the names it finds as links, looked up in the text's own encounter first and then in every
+recorded one, and hovering a link shows the effect as a game-style tooltip built from its entry. Event text
+descriptions use it too, so a feature showing user text should write it through `AugurEffectRefs.text`.
 
 ## Design rules
 

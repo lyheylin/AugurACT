@@ -6,7 +6,8 @@ and produces trigger regexes.
 
 **Status:** early. The plugin tab lists ACT's encounters; click one for its timeline. A fight's emotes, NPC
 speech and narration are grouped by text, with variables like `{player}`, and can be saved to the encounter,
-blacklisted, or turned into ACT triggers. See [the plan](docs/PLAN.md) for what's done and what's next.
+blacklisted, or turned into ACT triggers. Each recorded encounter also keeps a list of its buffs and
+detrimentals. See [the plan](docs/PLAN.md) for what's done and what's next.
 
 ## Requirements
 
@@ -42,6 +43,10 @@ dependency DLLs.
   encounter, or blacklist them.
 - **Triggers:** give an event text an ACT trigger whose regex matches the line as the game wrote it. Copy it
   as ACT's XML, or import it straight into ACT.
+- **Buffs and detrimentals:** record an encounter's effects by hand, with their icon, description, notes and
+  tooltip screenshots. Paste a screenshot of a tooltip and the icon, name and description are filled in from it
+  (Windows' OCR: check the numbers). Write `{Name}` in any description or note to refer to one; hovering it
+  shows the effect as a game-style tooltip.
 
 ## Analyze saved logs
 

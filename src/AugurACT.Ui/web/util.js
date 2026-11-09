@@ -59,5 +59,24 @@ window.AugurUtil = (() => {
     }
   }
 
-  return { make, time, clock, damage, fmtSeconds, median, plural, escapeRegex, fillLines };
+  // Small up / down arrows, stacked, for moving an entry of a list the user orders. move(offset) gets -1 or 1;
+  // an arrow that would move past either end is disabled.
+  function orderButtons(index, count, move, what) {
+    const box = make('span', 'order');
+    for (const [offset, glyph, label] of [[-1, '\u25B2', 'up'], [1, '\u25BC', 'down']]) {
+      const button = make('button', null, glyph);
+      button.type = 'button';
+      button.title = `Move ${what} ${label}`;
+      button.setAttribute('aria-label', button.title);
+      button.disabled = index + offset < 0 || index + offset >= count;
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        move(offset);
+      });
+      box.appendChild(button);
+    }
+    return box;
+  }
+
+  return { make, time, clock, damage, fmtSeconds, median, plural, escapeRegex, fillLines, orderButtons };
 })();
