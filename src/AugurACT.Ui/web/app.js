@@ -534,7 +534,9 @@ function renderData() {
       const cell = detail.insertCell();
       cell.colSpan = headers.length;
       cell.appendChild(npcList('Bosses', record.bosses));
-      cell.appendChild(npcList('Adds', record.adds));
+      cell.appendChild(npcList('Adds', record.adds, host
+        ? (npc) => send({ type: 'remove-add', zone: record.zone, name: record.name, add: npc.name })
+        : null));
       for (const feature of features) if (feature.recordSection) cell.appendChild(feature.recordSection(record));
 
       const setOpen = (open) => {
@@ -563,7 +565,8 @@ function renderData() {
     : 'No encounters recorded yet. Use "Update encounters data" on a fight in the Encounters tab.';
 }
 
-function npcList(title, npcs) {
+// remove(npc), when given, puts a remove cross at the end of each row.
+function npcList(title, npcs, remove = null) {
   const box = make('div', 'npc-list');
   box.appendChild(make('h4', null, `${title} (${npcs.length})`));
   if (!npcs.length) {
@@ -574,6 +577,7 @@ function npcList(title, npcs) {
   const head = table.createTHead().insertRow();
   head.appendChild(make('th', null, 'Name'));
   for (const flag of dataFlags) head.appendChild(make('th', 'center', flag.header));
+  if (remove) head.appendChild(make('th'));
   const body = table.createTBody();
   for (const npc of npcs) {
     const row = body.insertRow();
@@ -583,6 +587,7 @@ function npcList(title, npcs) {
       cell.className = 'center';
       cell.appendChild(checkbox(npc[flag.field], flag.describe(npc.name)));
     }
+    if (remove) window.AugurUtil.removeCell(row, `Remove ${npc.name} from the adds`, () => remove(npc));
   }
   box.appendChild(table);
   return box;

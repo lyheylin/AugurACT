@@ -14,6 +14,7 @@ namespace AugurACT.Core.Host
     public static class StoreEditSet
     {
         public static readonly IReadOnlyList<IStoreEdit> All = new IStoreEdit[0]
+            .Concat(EncounterRequests.All)
             .Concat(EventTextRequests.All)
             .Concat(EffectRequests.All)
             .ToList();

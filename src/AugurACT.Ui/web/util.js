@@ -78,5 +78,26 @@ window.AugurUtil = (() => {
     return box;
   }
 
-  return { make, time, clock, damage, fmtSeconds, median, plural, escapeRegex, fillLines, orderButtons };
+  // Every remove on the page: a small red cross, at the very end of its row. title says what it removes.
+  function removeButton(title, run) {
+    const button = make('button', 'remove-x', '\u00D7');
+    button.type = 'button';
+    button.title = title;
+    button.setAttribute('aria-label', title);
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      run();
+    });
+    return button;
+  }
+
+  // A row's last cell, holding its remove cross when given one; empty keeps the columns lined up.
+  function removeCell(row, title, run) {
+    const cell = row.insertCell();
+    cell.className = 'remove-cell';
+    if (run) cell.appendChild(removeButton(title, run));
+    return cell;
+  }
+
+  return { make, time, clock, damage, fmtSeconds, median, plural, escapeRegex, fillLines, orderButtons, removeButton, removeCell };
 })();

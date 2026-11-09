@@ -124,7 +124,7 @@
 
         const table = make('table', 'et-table et-fight');
         const head = table.createTHead().insertRow();
-        for (const [text, cls, title] of [['Kind'], ['Text'], ['Lines', 'num'], ['First', 'num'], ['Timer', 'num', 'Average time between events, for texts that repeat on a steady timer'], ['']]) {
+        for (const [text, cls, title] of [['Kind'], ['Text'], ['Lines', 'num'], ['First', 'num'], ['Timer', 'num', 'Average time between events, for texts that repeat on a steady timer'], [''], ['']]) {
           const th = head.appendChild(make('th', cls, text));
           if (title) th.title = title;
         }
@@ -172,16 +172,6 @@
             });
             actions.appendChild(trigger);
           }
-          const remove = make('button', null, 'Remove');
-          remove.type = 'button';
-          remove.title = 'Take this text off this fight\u2019s list and timeline, without blacklisting it';
-          remove.addEventListener('click', (event) => {
-            event.stopPropagation();
-            if (!removed.has(fightKey(s))) removed.set(fightKey(s), new Set());
-            removed.get(fightKey(s)).add(groupKey(group));
-            ctx.refresh(group);
-          });
-          actions.appendChild(remove);
           if (ctx.host) {
             const ban = make('button', null, 'Blacklist');
             ban.type = 'button';
@@ -193,6 +183,13 @@
             actions.appendChild(ban);
           }
 
+          const columns = row.cells.length;
+          window.AugurUtil.removeCell(row, 'Take this text off this fight\u2019s list and timeline, without blacklisting it', () => {
+            if (!removed.has(fightKey(s))) removed.set(fightKey(s), new Set());
+            removed.get(fightKey(s)).add(groupKey(group));
+            ctx.refresh(group);
+          });
+
           const choose = () => ctx.select(group);
           row.addEventListener('click', choose);
           row.addEventListener('keydown', (event) => {
@@ -201,7 +198,7 @@
               choose();
             }
           });
-          if (entry) texts.appendTriggers(rows, record, entry, row.cells.length);
+          if (entry) texts.appendTriggers(rows, record, entry, columns);
         }
         body.appendChild(table);
 

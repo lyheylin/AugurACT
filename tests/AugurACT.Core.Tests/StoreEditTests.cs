@@ -59,6 +59,20 @@ public class StoreEditTests
     }
 
     [Fact]
+    public void AnAddIsRemovedFromItsEncounterOnly()
+    {
+        var store = new EncounterStore();
+        store.Update("Zone", new[] { "Bossy" }, new[] { "A minion", "A pet" }, Array.Empty<BarrageCast>(), Day1);
+
+        var result = Run(store, """{"type":"remove-add","zone":"Zone","name":"Bossy","add":"a minion"}""");
+
+        Assert.Equal("A minion removed from Bossy.", result.Notice);
+        Assert.False(result.ChangesScanOptions);
+        Assert.Equal("A pet", Assert.Single(store.Encounters[0].Adds).Name);
+        Assert.Equal("Bossy doesn't list Nobody.", Run(store, """{"type":"remove-add","zone":"Zone","name":"Bossy","add":"Nobody"}""").Notice);
+    }
+
+    [Fact]
     public void BadInputIsAMessageForTheUser()
     {
         var store = Recorded();

@@ -2,7 +2,7 @@
 
 // ACT triggers for event texts: the dialog that makes one, and the rows that show an event text's triggers under
 // it, with Edit (the same dialog, filled in), Copy (ACT's XML on the clipboard), Import (straight into ACT's custom
-// triggers) and Remove. Triggers are
+// triggers) and a remove cross. Triggers are
 // saved under the text in the encounters data (EventTrigger in Core); the regex starts as the one Core built from
 // the text's log line (TriggerRegex), which matches the line as the game wrote it, markup included.
 //
@@ -13,7 +13,7 @@
 // Opened from the list under a fight's timeline (mechanics/eventtext.js) and each encounter's list
 // (eventtexts/feature.js), through AugurEventTexts.openTrigger(options).
 (() => {
-  const { make, plural } = window.AugurUtil;
+  const { make, plural, removeCell } = window.AugurUtil;
   const { render, kindTag, matchRecords, recordedEntry, encounterOptions, recordOf } = window.AugurEventTexts;
   const ctx = () => window.AugurPage.ctx;
 
@@ -343,8 +343,9 @@
     return parts.join(' · ') || 'No alert';
   }
 
-  // Adds a row per trigger of the entry (of record) to body, after the entry's own row. columns is the table's
-  // column count: a tag under the first, the trigger across the middle, and buttons in the last.
+  // Adds a row per trigger of the entry (of record) to body, after the entry's own row. columns is how many of the
+  // table's columns run up to its buttons: a tag under the first, the trigger across the middle, and buttons in
+  // the last; then the remove cross in a cell of its own, which the table keeps last.
   function appendTriggers(body, record, entry, columns) {
     for (const trigger of entry?.triggers || []) {
       const row = body.insertRow();
@@ -356,7 +357,11 @@
       cell.append(make('code', 'et-regex', trigger.regex), make('div', 'muted et-trigger-info', describe(trigger)));
       const actions = row.insertCell();
       actions.className = 'et-actions';
-      if (!ctx()?.host) continue;
+      const host = ctx()?.host;
+      removeCell(row, `Remove the trigger from ${record.name}`, host
+        ? () => ctx().send({ type: 'remove-event-trigger', zone: record.zone, name: record.name, text: entry.text, trigger })
+        : null);
+      if (!host) continue;
       const edit = make('button', null, 'Edit');
       edit.type = 'button';
       edit.title = 'Change the trigger’s regex, alert and settings';
@@ -368,7 +373,6 @@
       for (const [label, title, message] of [
         ['Copy', 'Copy the trigger as ACT’s XML, to paste into ACT or share', { type: 'copy-trigger', trigger }],
         ['Import', 'Add the trigger to ACT’s custom triggers', { type: 'import-trigger', trigger }],
-        ['Remove', `Remove the trigger from ${record.name}`, { type: 'remove-event-trigger', zone: record.zone, name: record.name, text: entry.text, trigger }],
       ]) {
         const button = make('button', null, label);
         button.type = 'button';

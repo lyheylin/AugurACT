@@ -55,9 +55,6 @@
       if (!ctx()?.host) continue;
       for (const [label, title, run] of [
         ['Edit', 'Change it, or add screenshots', () => open(record, effect)],
-        ['Remove', `Remove from ${record.name}`, () => {
-          if (confirm(`Remove ${effect.name} from ${record.name}?`)) ctx().send({ type: 'remove-effect', zone: record.zone, name: record.name, effect: effect.name });
-        }],
       ]) {
         const button = make('button', null, label);
         button.type = 'button';
@@ -72,6 +69,9 @@
       order.className = 'order-cell';
       order.appendChild(orderButtons(index, effects.length,
         (offset) => ctx().send({ type: 'move-effect', zone: record.zone, name: record.name, effect: effect.name, offset }), 'this effect'));
+      window.AugurUtil.removeCell(row, `Remove ${effect.name} from ${record.name}`, () => {
+        if (confirm(`Remove ${effect.name} from ${record.name}?`)) ctx().send({ type: 'remove-effect', zone: record.zone, name: record.name, effect: effect.name });
+      });
     }
     box.appendChild(table);
     return box;
@@ -151,7 +151,7 @@
         <div class="fx-icon-row">
           <span id="fx-icon-preview"></span>
           <button type="button" id="fx-icon-choose" title="Use an image file as the icon">Choose…</button>
-          <button type="button" id="fx-icon-remove">Remove</button>
+          <button type="button" id="fx-icon-remove" class="remove-x" title="Remove the icon" aria-label="Remove the icon">&times;</button>
         </div>
       </div>
     </div>

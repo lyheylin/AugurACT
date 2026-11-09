@@ -48,6 +48,7 @@
 .fx-icon-field { display: flex; flex-direction: column; gap: 3px; }
 .fx-icon-row { display: flex; align-items: center; gap: 6px; }
 .fx-icon-row button { padding: 1px 8px; font-size: 12px; }
+.fx-icon-row button.remove-x { padding: 0 3px; font-size: 15px; }
 .fx-drop { border: 1px dashed var(--rule); border-radius: 4px; padding: 8px; background: var(--panel); display: flex; flex-direction: column; gap: 6px; }
 .fx-drop:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .fx-drop.over { border-color: var(--accent); background: var(--selected); }
@@ -55,7 +56,7 @@
 .fx-drop .hint button, .fx-inline { padding: 0 6px; font-size: 12px; }
 .fx-shot { position: relative; border: 1px solid var(--rule); background: var(--bg); line-height: 0; }
 .fx-shot-busy { display: flex; align-items: center; justify-content: center; width: 90px; height: 56px; font-size: 12px; line-height: 1.4; color: var(--muted); }
-.fx-shot-remove { position: absolute; top: 2px; right: 2px; padding: 0 5px; line-height: 1.3; font-size: 13px; }
+.fx-shot-remove { position: absolute; top: 2px; right: 2px; padding: 0 5px; line-height: 1.3; font-size: 13px; font-weight: 700; color: var(--error); }
 #fx-error { color: var(--error); }
 #fx-error:empty, #fx-status:empty { display: none; }
 

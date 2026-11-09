@@ -38,7 +38,7 @@ The page and plugin exchange small JSON messages, defined in `Core/Host/HostMess
 | `update-encounter` (id, bosses) | `encounter-data` with the update's result |
 | `copy-trigger`, `import-trigger` (trigger) | `notice`. Handled on the UI thread (`ActTriggers`): ACT's XML on the clipboard, or `AddEditCustomTrigger` |
 | `add-effect-image` (requestId, data, asIcon) | `effect-image`: the image saved in the images folder, and for a screenshot the icon cut from it and the text read (`EffectImageReader`, on the worker thread) |
-| Any edit in `StoreEditSet` (today: `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`, `add-event-trigger`, `edit-event-trigger`, `remove-event-trigger`, `move-event-text`, `save-effect`, `remove-effect`, `move-effect`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
+| Any edit in `StoreEditSet` (today: `remove-add`, `add-event-text`, `remove-event-text`, `blacklist-event-text`, `unblacklist-event-text`, `add-event-trigger`, `edit-event-trigger`, `remove-event-trigger`, `move-event-text`, `save-effect`, `remove-effect`, `move-effect`) | `encounter-data` with a notice, and `reanalyzing` when the edit changed the scan options; every encounter is then analyzed again |
 
 A newly ended encounter arrives as `encounters` with `replace: false`. After a list, the plugin analyzes every
 encounter in the background, newest first; requests from the page go ahead of that queue. Encounter ids are

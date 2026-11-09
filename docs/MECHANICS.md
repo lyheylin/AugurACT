@@ -194,7 +194,7 @@ and short bursts with 1-second timestamps (lines 3-4 s apart) can pass as timers
 are named: `YOU` is the logger and `ARCHERSS` is Archerss. The timeline drops a line from the event's mark to
 each of their lanes, ending in a dot: faint and dotted, solid while its text is selected.
 
-**Remove** takes a group off one fight's list and timeline while the page is open, without blacklisting it.
+The red cross at the end of a row takes a group off one fight's list and timeline while the page is open, without blacklisting it.
 "Show again" under the list brings them back.
 
 `AugurACT.Cli texts <logs> [--data encounters.json]` prints each fight's groups, with the values seen for any
@@ -208,7 +208,8 @@ Separate from the catalog above, the plugin keeps the user's own record of encou
 
 - **An encounter is its zone plus its set of main NPCs** (bosses). Several can be chosen for bosses fought
   together. Recording another fight with the same zone and bosses adds to that encounter.
-- **Every other NPC in the fight is an add**, listed under the encounter.
+- **Every other NPC in the fight is an add**, listed under the encounter. The red cross at the end of its row
+  removes one; a later fight it shows up in records it again.
 - **Each NPC carries its own mechanic flags.** Today that is only `releasesBarrage`: yes once any recorded fight
   showed that NPC releasing a barrage (blocked or missed). A later fight without a release never turns it back
   to no, and a cancelled or unreleased warning doesn't count. More mechanics will add their own flags.
@@ -232,10 +233,10 @@ Separate from the catalog above, the plugin keeps the user's own record of encou
   can be shared, and the `regex` a new trigger starts from (rebuilt on load). A text keeps as many triggers as are
   added; one the same in every setting isn't saved twice. ACT itself tells triggers apart by regex and category,
   so two with both the same can be kept here, but importing them into ACT leaves only the last one imported. Under
-  each text, every trigger has **Copy** (ACT's share XML on the clipboard, a backslash written `&#92;` as ACT
+  each text, every trigger has **Edit** (the same dialog, filled in; it saves in the trigger's place), **Copy** (ACT's share XML on the clipboard, a backslash written `&#92;` as ACT
   does: `<Trigger R="A ghouly bladegaze&#92;&#92;/a is ..." SD="Scout add" ST="3" CR="T" C="..." T="F" TN=""
   Ta="F" />`), **Import** (straight into ACT's custom triggers, replacing one with the same regex and category)
-  and **Remove**.
+  and a red cross that removes it. Every remove on the page is a small red cross at the very end of its row.
 - **The blacklist** (`eventTextBlacklist`, in the same file) holds templates never to list. Blacklisting a text
   also removes it from every encounter's list. Summaries leave blacklisted lines out, so a change to the
   blacklist makes the plugin analyze every encounter again. Manage it on the Blacklist tab.
