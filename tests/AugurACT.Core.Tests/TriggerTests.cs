@@ -258,6 +258,34 @@ public class TriggerTests
     }
 
     [Fact]
+    public void AnEditedTriggerKeepsItsPlaceAndWhenItWasAdded()
+    {
+        var store = Recorded();
+        Run(store, AddFromFight);
+        Run(store, AddFromFight.Replace("Spread", "Move"));
+        var text = store.Encounters[0].EventTexts[0];
+        const string spread = """{"regex":"Bossy\\\\/a roars!","sound":3,"soundData":"Spread","category":"Zone","restrictToZone":true}""";
+        string Edit(string original, string trigger) =>
+            """{"type":"edit-event-trigger","zone":"Zone","name":"Bossy","text":"Bossy roars!","original":""" + original + ""","trigger":""" + trigger + "}";
+
+        var notice = Run(store, Edit(spread, """{"regex":"Bossy\\\\/a roars!","sound":3,"soundData":" Run ","category":"Zone","timer":true,"timerName":"Roar"}""")).Notice;
+
+        Assert.Equal("Trigger updated in Bossy.", notice);
+        Assert.Equal(new[] { "Run", "Move" }, text.Triggers!.Select(t => t.SoundData));
+        Assert.Equal("Roar", text.Triggers![0].TimerName);
+        Assert.False(text.Triggers![0].RestrictToZone);
+        Assert.Equal("2026-11-01", text.Triggers![0].Added);
+
+        // Gone already, or made the same as another of the text's triggers: a message, and nothing changes.
+        Assert.Contains("isn't in the encounters data", Assert.Throws<ArgumentException>(() => Run(store, Edit(spread, spread))).Message);
+        var move = """{"regex":"Bossy\\\\/a roars!","sound":3,"soundData":"Move","category":"Zone","restrictToZone":true}""";
+        var run = """{"regex":"Bossy\\\\/a roars!","sound":3,"soundData":"Run","category":"Zone","timer":true,"timerName":"Roar"}""";
+        Assert.Contains("already has a trigger like that", Assert.Throws<ArgumentException>(() => Run(store, Edit(run, move))).Message);
+        Assert.Equal("The trigger was already like that.", Run(store, Edit(run, run)).Notice);
+        Assert.Equal(new[] { "Run", "Move" }, text.Triggers!.Select(t => t.SoundData));
+    }
+
+    [Fact]
     public void ATriggerAndItsLineSurviveSavingAndLoading()
     {
         var store = Recorded();

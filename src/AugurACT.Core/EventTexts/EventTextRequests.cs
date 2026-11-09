@@ -35,6 +35,15 @@ namespace AugurACT.Core.EventTexts
                     default: return new StoreEditResult($"Trigger added to {r.Name}.");
                 }
             }),
+            new StoreEdit<EventTextRequest>("edit-event-trigger", (r, store, today) => new StoreEditResult(
+                store.EditTrigger(
+                    r.Zone,
+                    r.Name,
+                    r.Text,
+                    r.Original ?? throw new ArgumentException("The page sent no trigger to edit."),
+                    r.Trigger ?? throw new ArgumentException("The page sent no trigger."))
+                    ? $"Trigger updated in {r.Name}."
+                    : "The trigger was already like that.")),
             new StoreEdit<EventTextRequest>("remove-event-trigger", (r, store, today) =>
             {
                 store.RemoveTrigger(r.Zone, r.Name, r.Text, r.Trigger);
@@ -55,7 +64,8 @@ namespace AugurACT.Core.EventTexts
 
     // One shape for all of them: the recorded encounter (zone and name, as in EncounterRecord) where it applies,
     // the text and kind, for "add-event-text" the entry to save, for "move-event-text" the offset, and for the
-    // trigger edits the trigger (and for "add-event-trigger", the text it belongs to as the entry).
+    // trigger edits the trigger (and for "add-event-trigger", the text it belongs to as the entry; for
+    // "edit-event-trigger", the trigger as saved as the original and the edited one as the trigger).
     [DataContract]
     public sealed class EventTextRequest
     {
@@ -76,6 +86,9 @@ namespace AugurACT.Core.EventTexts
 
         [DataMember(Name = "trigger")]
         public EventTrigger? Trigger { get; set; }
+
+        [DataMember(Name = "original")]
+        public EventTrigger? Original { get; set; }
 
         // For "move-event-text": -1 moves the text up a place, 1 down.
         [DataMember(Name = "offset")]

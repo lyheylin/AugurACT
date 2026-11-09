@@ -1,7 +1,8 @@
 'use strict';
 
 // ACT triggers for event texts: the dialog that makes one, and the rows that show an event text's triggers under
-// it, with Copy (ACT's XML on the clipboard), Import (straight into ACT's custom triggers) and Remove. Triggers are
+// it, with Edit (the same dialog, filled in), Copy (ACT's XML on the clipboard), Import (straight into ACT's custom
+// triggers) and Remove. Triggers are
 // saved under the text in the encounters data (EventTrigger in Core); the regex starts as the one Core built from
 // the text's log line (TriggerRegex), which matches the line as the game wrote it, markup included.
 //
@@ -69,7 +70,7 @@
 
   let dialog = null;
   const field = (id) => document.getElementById(id);
-  // { record, entry, group, zone, defaultRegex }
+  // { record, entry, group, trigger (the saved one being edited), zone, defaultRegex }
   let state = null;
 
   const sound = () => Number(dialog.querySelector('input[name="trigger-sound"]:checked').value);
@@ -229,12 +230,16 @@
       : '';
   }
 
-  // options: { record, entry } from an encounter's list, or { group, encounter, summary } from a fight's.
+  // options: { record, entry } from an encounter's list, or { group, encounter, summary } from a fight's; with
+  // trigger too, the dialog edits that saved trigger of the entry instead of adding one.
   function open(options) {
     if (!ctx()?.host) return;
     build();
     const { group } = options;
-    state = { record: options.record || null, entry: options.entry || null, group: group || null, defaultRegex: '', youChecked: new Set() };
+    const editing = !group && options.trigger ? options.trigger : null;
+    state = { record: options.record || null, entry: options.entry || null, group: group || null, trigger: editing, defaultRegex: '', youChecked: new Set() };
+    field('trigger-title').textContent = editing ? 'Edit trigger' : 'Add trigger';
+    field('trigger-save').textContent = editing ? 'Save trigger' : 'Add trigger';
     // "Add zone" fills in the encounter's zone: the chosen record's, or the ACT fight's.
     state.zone = () => {
       const z = (group ? recordOf(field('trigger-encounter').value)?.zone : state.record?.zone) || options.encounter?.zone || '';
@@ -253,6 +258,17 @@
     for (const id of ['trigger-tts', 'trigger-category', 'trigger-timer-name']) field(id).value = '';
     for (const id of ['trigger-restrict', 'trigger-timer', 'trigger-tab']) field(id).checked = false;
     retarget();
+    if (editing) {
+      field('trigger-regex').value = editing.regex || '';
+      const soundValue = editing.sound === SOUND_TTS ? SOUND_TTS : SOUND_NONE;
+      dialog.querySelector(`input[name="trigger-sound"][value="${soundValue}"]`).checked = true;
+      field('trigger-tts').value = editing.soundData || '';
+      field('trigger-category').value = editing.category || '';
+      field('trigger-timer-name').value = editing.timerName || '';
+      field('trigger-restrict').checked = !!editing.restrictToZone;
+      field('trigger-timer').checked = !!editing.timer;
+      field('trigger-tab').checked = !!editing.resultsTab;
+    }
     dialog.showModal();
     update();
     field('trigger-regex').focus();
@@ -295,11 +311,13 @@
       }
       const t = target();
       state = null;
+      const where = current.trigger
+        ? { type: 'edit-event-trigger', text: t.text, original: current.trigger }
+        : { type: 'add-event-trigger', entry: { kind: t.kind, text: t.text, line: current.group?.occurrences[0]?.raw ?? null } };
       ctx().send({
-        type: 'add-event-trigger',
+        ...where,
         zone: t.record.zone,
         name: t.record.name,
-        entry: { kind: t.kind, text: t.text, line: current.group?.occurrences[0]?.raw ?? null },
         trigger: {
           regex: field('trigger-regex').value,
           sound: sound(),
@@ -339,6 +357,14 @@
       const actions = row.insertCell();
       actions.className = 'et-actions';
       if (!ctx()?.host) continue;
+      const edit = make('button', null, 'Edit');
+      edit.type = 'button';
+      edit.title = 'Change the trigger’s regex, alert and settings';
+      edit.addEventListener('click', (event) => {
+        event.stopPropagation();
+        open({ record, entry, trigger });
+      });
+      actions.appendChild(edit);
       for (const [label, title, message] of [
         ['Copy', 'Copy the trigger as ACT’s XML, to paste into ACT or share', { type: 'copy-trigger', trigger }],
         ['Import', 'Add the trigger to ACT’s custom triggers', { type: 'import-trigger', trigger }],
