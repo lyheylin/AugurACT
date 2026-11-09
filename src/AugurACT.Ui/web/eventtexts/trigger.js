@@ -97,7 +97,8 @@
     return [...new Set([...pattern.matchAll(/\(\?<([A-Za-z][A-Za-z0-9]*)>/g)].map((m) => m[1]))];
   }
 
-  // The groups that can be swapped: (?<player>, (?<player2>, ... and (?<YOU>, with where each starts.
+  // The groups that can be swapped: (?<player>, or (?<player1>, (?<player2>, ... and (?<YOU>, with where each
+  // starts.
   const PLAYER_GROUP = /\(\?<(player\d*|YOU)>/g;
   function playerGroups(pattern) {
     return [...pattern.matchAll(PLAYER_GROUP)].map((m) => ({ name: m[1], index: m.index, length: m[0].length }));
@@ -114,19 +115,13 @@
     }
   }
 
-  // The player groups as checkboxes, each with the values it matched in the test lines.
-  function showPlayerGroups(pattern, lines) {
+  // The player groups as checkboxes, each by its name.
+  function showPlayerGroups(pattern) {
     const groups = playerGroups(pattern);
     const box = field('trigger-you');
     box.hidden = !groups.length;
     const list = field('trigger-you-groups');
     if (state.youChecked.size && [...state.youChecked].some((i) => i >= groups.length)) state.youChecked.clear();
-    const rule = testRegex(pattern);
-    const seen = groups.map(() => new Set());
-    for (const line of rule ? lines : []) {
-      const m = rule.exec(line);
-      groups.forEach((g, k) => { if (m?.groups?.[`pg${k}`]) seen[k].add(m.groups[`pg${k}`]); });
-    }
     list.replaceChildren();
     groups.forEach((g, k) => {
       const label = make('label', `trigger-check trigger-you-group${g.name === 'YOU' ? ' is-you' : ''}`);
@@ -138,9 +133,7 @@
         else state.youChecked.delete(k);
         swapLabel(groups);
       });
-      const values = [...seen[k]];
       label.append(check, make('code', null, g.name));
-      if (values.length) label.append(make('span', 'muted', ` ${values.slice(0, 6).join(', ')}${values.length > 6 ? ', …' : ''}`));
       list.appendChild(label);
     });
     swapLabel(groups);
@@ -154,7 +147,8 @@
   }
 
   // Swaps the checked groups: player groups become YOU; or, when only YOU groups are checked, they become player
-  // groups again under a free name. Text to speech follows the rename.
+  // groups again under a free name: player when it's the only one, else the first free of player1, player2, ...
+  // Text to speech follows the rename.
   function swapGroups() {
     const input = field('trigger-regex');
     const pattern = input.value;
@@ -162,12 +156,14 @@
     const chosen = [...state.youChecked].map((k) => groups[k]).filter(Boolean);
     const back = chosen.every((g) => g.name === 'YOU');
     const taken = new Set(groups.map((g) => g.name));
+    const others = groups.filter((g) => g.name !== 'YOU').length;
+    const single = back && others === 0 && chosen.length === 1;
     const freeName = () => {
+      if (single) return 'player';
       let n = 1;
-      while (taken.has(n === 1 ? 'player' : `player${n}`)) n++;
-      const name = n === 1 ? 'player' : `player${n}`;
-      taken.add(name);
-      return name;
+      while (taken.has(`player${n}`)) n++;
+      taken.add(`player${n}`);
+      return `player${n}`;
     };
     let result = pattern;
     const tts = field('trigger-tts');
@@ -202,7 +198,7 @@
       check.textContent = 'No log line is saved with this text, so the regex was built from the text alone. Check it in ACT, or add the text again from a fight.';
     }
 
-    showPlayerGroups(pattern, t.lines);
+    showPlayerGroups(pattern);
     const names = groupNames(pattern);
     field('trigger-groups').textContent = names.length
       ? `Text to speech can say what a group matched: ${names.map((n) => `\${${n}}`).join(' ')}.`

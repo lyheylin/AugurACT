@@ -109,10 +109,12 @@ namespace AugurACT.Core.EventTexts
             return index >= 0;
         }
 
-        // Builds the regex a new trigger for the text starts from: from its log line, or from the text and the
-        // encounter's NPC names when it has none.
+        // Takes the players' names out of the text's log line (TriggerRegex.Anonymize), then builds the regex a new
+        // trigger for the text starts from: from that line, or from the text and the encounter's NPC names when it
+        // has none.
         public static void RefreshRegex(EventTextRecord record, EncounterRecord encounter)
         {
+            record.Line = TriggerRegex.Anonymize(record.Text, record.Line);
             var npcs = encounter.Bosses.Concat(encounter.Adds).Select(n => n.Name);
             var regex = TriggerRegex.Build(record.Kind, record.Text, record.Line, npcs);
             record.Regex = regex.Pattern;

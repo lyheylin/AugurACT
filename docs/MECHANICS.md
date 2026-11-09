@@ -155,11 +155,11 @@ it, so markup must be in place. Each occurrence keeps its line (`raw`), and the 
 
 - The NPC link at the start is dropped up to the name, since its id changes per spawn; a link later in the line
   keeps `\\aPC -?\d+ [^\\]*?:` for it. Colour codes stay as written, also mid-line (Heroic Surge).
-- Each variable is a named group, numbered from the second of a kind (`player`, `player2`), so TTS can say
-  `${player}`. Regex characters and `"` are escaped; spaces and `#` stay readable.
+- Each variable is a named group after its kind (`player`), numbered when the kind repeats (`player1`,
+  `player2`), so TTS can say `${player}`. Regex characters and `"` are escaped; spaces and `#` stay readable.
 - No anchors: ACT's line starts with the time stamp.
-- **The YOU group.** In the trigger dialog, any `player` group (or several) can be checked and swapped to
-  `(?<YOU>...)`, and back; TTS `${player}` follows the rename. ACT (since 3.2.1.251; `ParseCustomSingle`) drops
+- **The YOU group.** In the trigger dialog, any `player` group (or several), listed by name, can be checked
+  and swapped to `(?<YOU>...)`, and back; TTS `${player}` follows the rename. ACT (since 3.2.1.251; `ParseCustomSingle`) drops
   a match unless the YOU group's text contains the logging character's name, ignoring case, so the trigger
   fires only for you. The literal word `YOU` in a line doesn't count. With two YOU groups ACT checks the value
   .NET reports for that name, the last one captured.
@@ -224,16 +224,18 @@ Separate from the catalog above, the plugin keeps the user's own record of encou
   (seconds or m:ss); typed values count as typed by hand (no intervals). Editing an entry and unticking the
   timer removes it.
 - **Triggers** (`triggers` under an event text: regex, sound, soundData, category, restrictToZone, timer,
-  timerName, resultsTab). "Trigger +" on a text in either list opens a dialog with the regex filled in and
-  checked against the fight's lines (or the saved `line`); sound is none or TTS; "Add zone" fills the category
-  with the encounter's zone. From a fight's list it saves into the recorded encounter, adding the text if it
-  isn't listed yet. Each text also saves a `line` from the fight it came from, and the `regex` a new trigger
-  starts from (rebuilt on load). A text keeps as many triggers as are added; one the same in every setting
-  isn't saved twice. ACT itself tells triggers apart by regex and category, so two with both the same can be
-  kept here, but importing them into ACT leaves only the last one imported. Under each text, every trigger has **Copy** (ACT's share XML on the clipboard, a backslash
-  written `&#92;` as ACT does: `<Trigger R="A ghouly bladegaze&#92;&#92;/a is ..." SD="Scout add" ST="3" CR="T"
-  C="..." T="F" TN="" Ta="F" />`), **Import** (straight into ACT's custom triggers, replacing one with the same
-  regex and category) and **Remove**.
+  timerName, resultsTab). "Trigger +" on a text in either list opens a dialog with the regex filled in and checked
+  against the fight's lines (or the saved `line`); sound is none or TTS; "Add zone" fills the category with the
+  encounter's zone. From a fight's list it saves into the recorded encounter, adding the text if it isn't listed
+  yet. Each text also saves a `line` from the fight it came from, with no one's name in it (each `{player}` value
+  is written `Player`, a player link `\aPC 0 Player:`; a line that doesn't fit the text isn't kept), so the data
+  can be shared, and the `regex` a new trigger starts from (rebuilt on load). A text keeps as many triggers as are
+  added; one the same in every setting isn't saved twice. ACT itself tells triggers apart by regex and category,
+  so two with both the same can be kept here, but importing them into ACT leaves only the last one imported. Under
+  each text, every trigger has **Copy** (ACT's share XML on the clipboard, a backslash written `&#92;` as ACT
+  does: `<Trigger R="A ghouly bladegaze&#92;&#92;/a is ..." SD="Scout add" ST="3" CR="T" C="..." T="F" TN=""
+  Ta="F" />`), **Import** (straight into ACT's custom triggers, replacing one with the same regex and category)
+  and **Remove**.
 - **The blacklist** (`eventTextBlacklist`, in the same file) holds templates never to list. Blacklisting a text
   also removes it from every encounter's list. Summaries leave blacklisted lines out, so a change to the
   blacklist makes the plugin analyze every encounter again. Manage it on the Blacklist tab.

@@ -26,7 +26,8 @@ namespace AugurACT.Core.EventTexts
         public RecordedTimer? Timer { get; set; }
 
         // A log line of the text as the game wrote it (after the time stamp), markup included, from the fight it was
-        // added from. Trigger regexes are built from it. Missing for texts typed by hand.
+        // added from, with no player's name in it (TriggerRegex.Anonymize). Trigger regexes are built from it.
+        // Missing for texts typed by hand, and for a line that doesn't fit the text.
         [DataMember(Name = "line", Order = 5, EmitDefaultValue = false)]
         public string? Line { get; set; }
 

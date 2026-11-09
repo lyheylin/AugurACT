@@ -18,7 +18,8 @@ namespace AugurACT.Core.EventTexts
     //
     // The NPC link at the start of a line is dropped up to the name (its id changes every spawn). Links later in
     // the line keep a pattern for their id; colour codes are kept as written. Each variable is a named group,
-    // numbered from the second of a kind (player, player2), so a trigger can speak it as ${player}.
+    // named after its kind (player), or numbered when the kind repeats (player1, player2), so a trigger can speak
+    // it as ${player}.
     //
     // Without a line, or when the text no longer fits it, the regex is built from the text alone. An emote or
     // NPC say still gets its link end after a name the encounter lists; narration loses its colour codes, which is
@@ -78,47 +79,56 @@ namespace AugurACT.Core.EventTexts
             return text.ToString();
         }
 
+        // A placeholder for each player in a saved line, which matches the player variable like a real name.
+        public const string PlayerPlaceholder = "Player";
+
+        // The line with no one's name in it, for saving in the encounters data: each {player} value becomes
+        // PlayerPlaceholder and each player link loses its id and name (\aPC 0 Player:). Everything else, markup
+        // included, stays, so it builds the same regex. Null when the line doesn't fit the template, since a name
+        // in it can't be found then.
+        public static string? Anonymize(string template, string? line)
+        {
+            if (string.IsNullOrEmpty(line) || !EventTextTemplate.TryParse(template, out var parts, out _)
+                || !TryLayout(template, parts, line!, out var layout))
+            {
+                return null;
+            }
+
+            var result = new StringBuilder(line!.Length);
+            foreach (var token in layout.Tokens)
+            {
+                if (token.Index < 0)
+                {
+                    result.Append(token.LinkType == "PC" ? @"\aPC 0 " + PlayerPlaceholder + ":" : token.Text);
+                    continue;
+                }
+
+                var span = layout.Spans.FirstOrDefault(s => s.Kind == EventTextTemplate.Player && token.Index >= s.Start && token.Index < s.End);
+                if (span == null)
+                {
+                    result.Append(token.Text);
+                }
+                else if (token.Index == span.Start)
+                {
+                    result.Append(PlayerPlaceholder);
+                }
+            }
+
+            return result.ToString();
+        }
+
         private static bool TryFromLine(string template, List<TemplatePart> parts, string line, out string pattern)
         {
             pattern = "";
-
-            // The line as tokens: markup, or one character of the text EventTextDetector sees.
-            var tokens = new List<Token>();
-            var text = new StringBuilder();
-            var at = 0;
-            foreach (Match markup in Markup.Matches(line))
-            {
-                AddText(line, at, markup.Index, tokens, text);
-                tokens.Add(new Token(markup.Value, markup.Groups["type"].Success ? markup.Groups["type"].Value : null));
-                at = markup.Index + markup.Length;
-            }
-
-            AddText(line, at, line.Length, tokens, text);
-
-            // The detector trims the text; the template is matched against that.
-            var shown = text.ToString();
-            var start = shown.Length - shown.TrimStart().Length;
-            var end = shown.TrimEnd().Length;
-            if (end <= start)
+            if (!TryLayout(template, parts, line, out var layout))
             {
                 return false;
             }
 
-            var match = EventTextTemplate.ToRegex(template).Match(shown.Substring(start, end - start));
-            if (!match.Success)
-            {
-                return false;
-            }
-
-            // Where each variable is in the text, and the group it becomes.
-            var spans = new List<Span>();
-            var names = new GroupNames();
-            var group = 1;
-            foreach (var part in parts.Where(p => p.Kind != null))
-            {
-                var value = match.Groups[group++];
-                spans.Add(new Span(start + value.Index, start + value.Index + value.Length, names.Group(part.Kind!)));
-            }
+            var tokens = layout.Tokens;
+            var spans = layout.Spans;
+            var start = layout.Start;
+            var end = layout.End;
 
             var regex = new StringBuilder();
             Span? inside = null;
@@ -175,6 +185,51 @@ namespace AugurACT.Core.EventTexts
             return true;
         }
 
+        // The line as tokens (markup, or one character of the text EventTextDetector sees), and where each
+        // variable's value is in that text. False when the template doesn't match the line.
+        private static bool TryLayout(string template, List<TemplatePart> parts, string line, out Layout layout)
+        {
+            layout = null!;
+            var tokens = new List<Token>();
+            var text = new StringBuilder();
+            var at = 0;
+            foreach (Match markup in Markup.Matches(line))
+            {
+                AddText(line, at, markup.Index, tokens, text);
+                tokens.Add(new Token(markup.Value, markup.Groups["type"].Success ? markup.Groups["type"].Value : null));
+                at = markup.Index + markup.Length;
+            }
+
+            AddText(line, at, line.Length, tokens, text);
+
+            // The detector trims the text; the template is matched against that.
+            var shown = text.ToString();
+            var start = shown.Length - shown.TrimStart().Length;
+            var end = shown.TrimEnd().Length;
+            if (end <= start)
+            {
+                return false;
+            }
+
+            var match = EventTextTemplate.ToRegex(template).Match(shown.Substring(start, end - start));
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            var spans = new List<Span>();
+            var names = new GroupNames(parts);
+            var group = 1;
+            foreach (var part in parts.Where(p => p.Kind != null))
+            {
+                var value = match.Groups[group++];
+                spans.Add(new Span(start + value.Index, start + value.Index + value.Length, part.Kind!, names.Group(part.Kind!)));
+            }
+
+            layout = new Layout(tokens, spans, start, end);
+            return true;
+        }
+
         private static void AddText(string line, int from, int to, List<Token> tokens, StringBuilder text)
         {
             for (var i = from; i < to; i++)
@@ -187,7 +242,7 @@ namespace AugurACT.Core.EventTexts
         private static string FromText(string kind, List<TemplatePart> parts, IEnumerable<string> npcs)
         {
             var regex = new StringBuilder();
-            var names = new GroupNames();
+            var names = new GroupNames(parts);
             var speaker = kind == EventTextKind.Emote || kind == EventTextKind.Say;
             for (var i = 0; i < parts.Count; i++)
             {
@@ -230,12 +285,19 @@ namespace AugurACT.Core.EventTexts
         private sealed class GroupNames
         {
             private readonly Dictionary<string, int> used = new Dictionary<string, int>(StringComparer.Ordinal);
+            private readonly Dictionary<string, int> total;
+
+            public GroupNames(IEnumerable<TemplatePart> parts)
+            {
+                total = parts.Where(p => p.Kind != null).GroupBy(p => p.Kind!, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+            }
 
             public string Group(string kind)
             {
                 used.TryGetValue(kind, out var count);
                 used[kind] = ++count;
-                var name = count == 1 ? kind : kind + count;
+                var name = total.TryGetValue(kind, out var all) && all > 1 ? kind + count : kind;
                 var pattern = EventTextTemplate.VariablePattern(kind);
 
                 // Classes and archetypes are written in capitals in some lines (MAGE).
@@ -274,10 +336,11 @@ namespace AugurACT.Core.EventTexts
 
         private sealed class Span
         {
-            public Span(int start, int end, string group)
+            public Span(int start, int end, string kind, string group)
             {
                 Start = start;
                 End = end;
+                Kind = kind;
                 Group = group;
             }
 
@@ -285,7 +348,30 @@ namespace AugurACT.Core.EventTexts
 
             public int End { get; }
 
+            // The variable's kind (EventTextTemplate.Player...).
+            public string Kind { get; }
+
             public string Group { get; }
+        }
+
+        private sealed class Layout
+        {
+            public Layout(List<Token> tokens, List<Span> spans, int start, int end)
+            {
+                Tokens = tokens;
+                Spans = spans;
+                Start = start;
+                End = end;
+            }
+
+            public List<Token> Tokens { get; }
+
+            public List<Span> Spans { get; }
+
+            // Where the trimmed text the template matched starts and ends.
+            public int Start { get; }
+
+            public int End { get; }
         }
     }
 }

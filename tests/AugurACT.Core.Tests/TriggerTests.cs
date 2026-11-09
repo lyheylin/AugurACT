@@ -78,7 +78,7 @@ public class TriggerTests
 
         Assert.True(regex.FromLine);
         Assert.Equal(
-            @"\\#FFD700Heroic Surge \\#FFFFFFhas been triggered by: \\#87CEEB(?<archetype>(?i:Fighter|Priest|Scout|Mage))\\#FFFFFF, \\#87CEEB(?<archetype2>(?i:Fighter|Priest|Scout|Mage))\\#FFFFFF!",
+            @"\\#FFD700Heroic Surge \\#FFFFFFhas been triggered by: \\#87CEEB(?<archetype1>(?i:Fighter|Priest|Scout|Mage))\\#FFFFFF, \\#87CEEB(?<archetype2>(?i:Fighter|Priest|Scout|Mage))\\#FFFFFF!",
             regex.Pattern);
         MatchesLog(regex.Pattern, line, @"\#FFD700Heroic Surge \#FFFFFFhas been triggered by: \#87CEEBPRIEST\#FFFFFF, \#87CEEBSCOUT\#FFFFFF!");
     }
@@ -130,6 +130,54 @@ public class TriggerTests
 
         Assert.False(regex.FromLine);
         Assert.Equal("Thresinet targets (?<player>[A-Za-z]+) for Void Pox!", regex.Pattern);
+    }
+
+    [Fact]
+    public void ASavedLineKeepsNoPlayerNames()
+    {
+        const string template = "Bossy glares at {player} and {player}, a {class}!";
+        const string line = @"\aNPC 12 Bossy:Bossy\/a glares at \aPC 345 Tanka:Tanka\/a and Healerc, a \#FF0000Wizard!";
+        var anonymous = TriggerRegex.Anonymize(template, line);
+
+        Assert.Equal(@"\aNPC 12 Bossy:Bossy\/a glares at \aPC 0 Player:Player\/a and Player, a \#FF0000Wizard!", anonymous);
+        Assert.Equal(TriggerRegex.Build("emote", template, line).Pattern, TriggerRegex.Build("emote", template, anonymous).Pattern);
+
+        // A line that doesn't fit the text isn't kept, since its names can't be found.
+        Assert.Null(TriggerRegex.Anonymize("Bossy roars!", @"Tanka roars!"));
+    }
+
+    [Fact]
+    public void LinesInTheEncountersDataLoseTheirNamesWhenSavedAndLoaded()
+    {
+        var store = Recorded();
+        Run(store, """
+            {"type":"add-event-text","zone":"Zone","name":"Bossy",
+             "entry":{"kind":"emote","text":"Bossy glares at {player}!","line":"\\aNPC 12 Bossy:Bossy\\/a glares at \\aPC 345 Tanka:Tanka\\/a!"}}
+            """);
+        Assert.Equal(@"\aNPC 12 Bossy:Bossy\/a glares at \aPC 0 Player:Player\/a!", store.Encounters[0].EventTexts[0].Line);
+
+        // Data saved before names were taken out.
+        var path = Path.Combine(Path.GetTempPath(), $"augur-names-{Guid.NewGuid():N}.json");
+        try
+        {
+            store.Encounters[0].EventTexts[0].Line = @"\aNPC 12 Bossy:Bossy\/a glares at \aPC 345 Tanka:Tanka\/a!";
+            store.Save(path);
+            Assert.Equal(@"\aNPC 12 Bossy:Bossy\/a glares at \aPC 0 Player:Player\/a!", EncounterStore.Load(path).Encounters[0].EventTexts[0].Line);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void RepeatedVariablesAreNumberedFromOne()
+    {
+        var fromLine = TriggerRegex.Build("narration", "{player} and {player} are linked!", @"\#FF0000Tanka and Healerc are linked!");
+        var fromText = TriggerRegex.Build("narration", "{player} and {player} are linked!", null);
+
+        Assert.Equal(@"\\#FF0000(?<player1>[A-Za-z]+) and (?<player2>[A-Za-z]+) are linked!", fromLine.Pattern);
+        Assert.Equal("(?<player1>[A-Za-z]+) and (?<player2>[A-Za-z]+) are linked!", fromText.Pattern);
     }
 
     [Fact]
