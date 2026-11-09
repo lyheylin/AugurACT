@@ -49,10 +49,18 @@ namespace AugurACT.Core.EventTexts
         [DataMember(Name = "added", Order = 8, EmitDefaultValue = false)]
         public string? Added { get; set; }
 
-        // ACT tells triggers apart by regex and category.
+        // The same trigger in every setting (not when it was added). An event text can keep several triggers, even
+        // with one regex and category; ACT itself keeps one per regex and category, so importing such a pair into
+        // ACT leaves the last one imported.
         public bool SameAs(EventTrigger other) =>
             string.Equals(Regex, other.Regex, StringComparison.Ordinal)
-            && string.Equals(Category ?? "", other.Category ?? "", StringComparison.OrdinalIgnoreCase);
+            && string.Equals(Category ?? "", other.Category ?? "", StringComparison.OrdinalIgnoreCase)
+            && Sound == other.Sound
+            && string.Equals(SoundData ?? "", other.SoundData ?? "", StringComparison.Ordinal)
+            && RestrictToZone == other.RestrictToZone
+            && Timer == other.Timer
+            && string.Equals(TimerName ?? "", other.TimerName ?? "", StringComparison.Ordinal)
+            && ResultsTab == other.ResultsTab;
 
         // Throws ArgumentException with a message for the user when ACT couldn't use it. Trims the text fields.
         public EventTrigger Checked()

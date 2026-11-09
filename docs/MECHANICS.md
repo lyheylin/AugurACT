@@ -228,8 +228,9 @@ Separate from the catalog above, the plugin keeps the user's own record of encou
   checked against the fight's lines (or the saved `line`); sound is none or TTS; "Add zone" fills the category
   with the encounter's zone. From a fight's list it saves into the recorded encounter, adding the text if it
   isn't listed yet. Each text also saves a `line` from the fight it came from, and the `regex` a new trigger
-  starts from (rebuilt on load). ACT tells triggers apart by regex and category, so saving one with both the
-  same replaces it. Under each text, every trigger has **Copy** (ACT's share XML on the clipboard, a backslash
+  starts from (rebuilt on load). A text keeps as many triggers as are added; one the same in every setting
+  isn't saved twice. ACT itself tells triggers apart by regex and category, so two with both the same can be
+  kept here, but importing them into ACT leaves only the last one imported. Under each text, every trigger has **Copy** (ACT's share XML on the clipboard, a backslash
   written `&#92;` as ACT does: `<Trigger R="A ghouly bladegaze&#92;&#92;/a is ..." SD="Scout add" ST="3" CR="T"
   C="..." T="F" TN="" Ta="F" />`), **Import** (straight into ACT's custom triggers, replacing one with the same
   regex and category) and **Remove**.

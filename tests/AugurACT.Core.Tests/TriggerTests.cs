@@ -192,15 +192,20 @@ public class TriggerTests
         Assert.Equal("Spread", trigger.SoundData);
         Assert.Equal("2026-11-01", trigger.Added);
 
-        // The same regex and category is the same ACT trigger: it's replaced.
-        Assert.Equal("Trigger updated in Bossy.", Run(store, AddFromFight.Replace("Spread", "Move")).Notice);
-        Assert.Equal("Move", Assert.Single(text.Triggers!).SoundData);
-        Assert.Equal("Trigger added to Bossy.", Run(store, AddFromFight.Replace("\"category\":\"Zone\"", "\"category\":\"Other\"")).Notice);
+        // Another trigger with the same regex and category is kept next to it; an identical one isn't added twice.
+        Assert.Equal("Trigger added to Bossy.", Run(store, AddFromFight.Replace("Spread", "Move")).Notice);
+        Assert.Equal(new[] { "Spread", "Move" }, text.Triggers!.Select(t => t.SoundData));
+        Assert.Equal("Bossy already has that trigger.", Run(store, AddFromFight).Notice);
         Assert.Equal(2, text.Triggers!.Count);
+        Assert.Equal("Trigger added to Bossy.", Run(store, AddFromFight.Replace("\"category\":\"Zone\"", "\"category\":\"Other\"")).Notice);
+        Assert.Equal(3, text.Triggers!.Count);
 
-        Run(store, """{"type":"remove-event-trigger","zone":"Zone","name":"Bossy","text":"Bossy roars!","trigger":{"regex":"Bossy\\\\/a roars!","category":"zone"}}""");
+        // Remove takes only the trigger the same in every setting.
+        Run(store, """{"type":"remove-event-trigger","zone":"Zone","name":"Bossy","text":"Bossy roars!","trigger":{"regex":"Bossy\\\\/a roars!","sound":3,"soundData":"Move","category":"zone","restrictToZone":true}}""");
+        Assert.Equal(new[] { "Spread", "Spread" }, text.Triggers!.Select(t => t.SoundData));
+        Run(store, """{"type":"remove-event-trigger","zone":"Zone","name":"Bossy","text":"Bossy roars!","trigger":{"regex":"Bossy\\\\/a roars!","sound":3,"soundData":"Spread","category":"Zone","restrictToZone":true}}""");
         Assert.Equal("Other", Assert.Single(text.Triggers!).Category);
-        Run(store, """{"type":"remove-event-trigger","zone":"Zone","name":"Bossy","text":"Bossy roars!","trigger":{"regex":"Bossy\\\\/a roars!","category":"Other"}}""");
+        Run(store, """{"type":"remove-event-trigger","zone":"Zone","name":"Bossy","text":"Bossy roars!","trigger":{"regex":"Bossy\\\\/a roars!","sound":3,"soundData":"Spread","category":"Other","restrictToZone":true}}""");
         Assert.Null(text.Triggers);
     }
 
