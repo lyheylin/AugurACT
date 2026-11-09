@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
+using AugurACT.Core.Effects;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -14,12 +15,15 @@ namespace AugurACT.Ui
         private readonly WebView2 webView = new WebView2 { Dock = DockStyle.Fill };
         private readonly List<string> pendingMessages = new List<string>();
         private readonly string pluginDir;
+        private readonly string imageDir;
         private readonly Action<string> setStatus;
         private bool pageReady;
 
-        public TimelineView(string pluginDir, Action<string> setStatus)
+        // imageDir holds the buff and detrimental images (EffectImages), which the page loads from their own host.
+        public TimelineView(string pluginDir, string imageDir, Action<string> setStatus)
         {
             this.pluginDir = pluginDir;
+            this.imageDir = imageDir;
             this.setStatus = setStatus;
             Controls.Add(webView);
             InitializeWebView();
@@ -63,6 +67,11 @@ namespace AugurACT.Ui
                 webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
                     VirtualHost,
                     Path.Combine(pluginDir, "web"),
+                    CoreWebView2HostResourceAccessKind.DenyCors);
+                Directory.CreateDirectory(imageDir);
+                webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    EffectImages.VirtualHost,
+                    imageDir,
                     CoreWebView2HostResourceAccessKind.DenyCors);
                 webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
                 webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;

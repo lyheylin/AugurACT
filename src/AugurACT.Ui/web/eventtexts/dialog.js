@@ -38,7 +38,7 @@
     <p id="text-check" role="status"></p>
     <p id="text-existing" class="muted hint"></p>
     <label class="text-field" id="text-description-row"><span>Description</span>
-      <textarea id="text-description" rows="2" placeholder="Your note: what it means, what to do"></textarea>
+      <textarea id="text-description" rows="2" placeholder="Your note: what it means, what to do. Write {Name} to refer to a buff or detrimental."></textarea>
     </label>
     <div class="text-field" id="text-timer-row">
       <label class="et-timer-toggle"><input type="checkbox" id="text-timer-on"> <span id="text-timer-label">Attach timer</span></label>

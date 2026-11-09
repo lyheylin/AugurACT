@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://augur-images.act">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AugurACT</title>
   <link rel="stylesheet" href="style.css">
@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="mechanics/eventtext.css">
   <!-- One stylesheet and the scripts per page feature, in their own folder. -->
   <link rel="stylesheet" href="eventtexts/eventtexts.css">
+  <link rel="stylesheet" href="effects/effects.css">
 </head>
 <body>
   <header class="top">
@@ -91,10 +92,12 @@
   <script src="util.js"></script>
   <script src="timeline.js"></script>
   <script src="page.js"></script>
+  <script src="effects/refs.js"></script>
   <script src="eventtexts/format.js"></script>
   <script src="eventtexts/dialog.js"></script>
   <script src="eventtexts/trigger.js"></script>
   <script src="eventtexts/feature.js"></script>
+  <script src="effects/effects.js"></script>
   <script src="mechanics/barrage.js"></script>
   <script src="mechanics/deaths.js"></script>
   <script src="mechanics/eventtext.js"></script>

@@ -714,6 +714,7 @@ if (host) {
     else if (data.type === 'encounter-npcs') onEncounterNpcs(data);
     else if (data.type === 'encounter-data') onEncounterData(data);
     else if (data.type === 'notice') notice(data.text, data.error);
+    else for (const feature of features) feature.messages?.[data.type]?.(data);
   });
   send({ type: 'ready' });
 }

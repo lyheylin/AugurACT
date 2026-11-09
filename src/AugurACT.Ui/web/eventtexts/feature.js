@@ -3,7 +3,7 @@
 // Event texts on the page outside the timeline: each recorded encounter's list on the Encounters data tab, with
 // each text's ACT triggers under it (eventtexts/trigger.js), and the Blacklist tab. Registered with AugurPage, which places them; the timeline part is mechanics/eventtext.js.
 (() => {
-  const { make } = window.AugurUtil;
+  const { make, orderButtons } = window.AugurUtil;
   const { render, kindTag, formatTimer, describeRecorded, open, openTrigger, appendTriggers } = window.AugurEventTexts;
   const ctx = () => window.AugurPage.ctx;
 
@@ -19,12 +19,19 @@
       head.appendChild(add);
     }
     box.appendChild(head);
-    box.appendChild(entryTable(record.eventTexts || [], 'No event texts yet. Add them from a fight’s timeline, or by hand.', true, (entry) => [
-      ['Trigger +', 'Make an ACT trigger for this text', () => openTrigger({ record, entry })],
-      ['Edit', 'Change the text, description or timer', () => open({ mode: 'edit', record, entry })],
-      ['Remove', `Remove from ${record.name}`, () => ctx().send({ type: 'remove-event-text', zone: record.zone, name: record.name, text: entry.text })],
-      ['Blacklist', 'Never list this text in any encounter', () => open({ mode: 'blacklist', kind: entry.kind, text: entry.text })],
-    ], (body, entry, columns) => appendTriggers(body, record, entry, columns)));
+    box.appendChild(entryTable(record.eventTexts || [], {
+      empty: 'No event texts yet. Add them from a fight’s timeline, or by hand.',
+      withDetails: true,
+      record,
+      actions: (entry) => [
+        ['Trigger +', 'Make an ACT trigger for this text', () => openTrigger({ record, entry })],
+        ['Edit', 'Change the text, description or timer', () => open({ mode: 'edit', record, entry })],
+        ['Remove', `Remove from ${record.name}`, () => ctx().send({ type: 'remove-event-text', zone: record.zone, name: record.name, text: entry.text })],
+        ['Blacklist', 'Never list this text in any encounter', () => open({ mode: 'blacklist', kind: entry.kind, text: entry.text })],
+      ],
+      children: (body, entry, columns) => appendTriggers(body, record, entry, columns),
+      move: (entry, offset) => ctx().send({ type: 'move-event-text', zone: record.zone, name: record.name, text: entry.text, offset }),
+    }));
     return box;
   }
 
@@ -40,27 +47,33 @@
       head.appendChild(add);
     }
     host.appendChild(head);
-    host.appendChild(entryTable(data?.blacklist || [], 'Nothing blacklisted.', false, (entry) => [
-      ['Remove', 'List this text again', () => ctx().send({ type: 'unblacklist-event-text', text: entry.text })],
-    ]));
+    host.appendChild(entryTable(data?.blacklist || [], {
+      empty: 'Nothing blacklisted.',
+      actions: (entry) => [
+        ['Remove', 'List this text again', () => ctx().send({ type: 'unblacklist-event-text', text: entry.text })],
+      ],
+    }));
   }
 
-  // children(body, entry, columns), when given, adds rows under each entry's own.
-  function entryTable(entries, empty, withDetails, actions, children) {
+  // actions(entry) gives its buttons. children(body, entry, columns), when given, adds rows under each entry's
+  // own. record is the encounter the entries belong to, where their descriptions' {effect} references are looked
+  // up first. move(entry, offset), when given, adds the up / down arrows that order the list.
+  function entryTable(entries, { empty, withDetails = false, actions, children, record = null, move = null }) {
     if (!entries.length) return make('p', 'muted', empty);
     const table = make('table', 'et-table');
+    const ordered = move && ctx()?.host;
     if (withDetails) {
       const head = table.createTHead().insertRow();
-      for (const [text, cls] of [['Kind'], ['Text'], ['Timer', 'num'], ['']]) head.appendChild(make('th', cls, text));
+      for (const [text, cls] of [['Kind'], ['Text'], ['Timer', 'num'], [''], ...(ordered ? [['']] : [])]) head.appendChild(make('th', cls, text));
     }
     const body = table.createTBody();
-    for (const entry of entries) {
+    for (const [index, entry] of entries.entries()) {
       const row = body.insertRow();
       row.insertCell().appendChild(kindTag(entry.kind));
       const text = row.insertCell();
       text.className = 'et-text-cell';
       text.appendChild(render(entry.text));
-      if (entry.description) text.appendChild(make('div', 'et-description', entry.description));
+      if (entry.description) text.appendChild(window.AugurEffectRefs.text(entry.description, record, 'et-description'));
       if (withDetails) {
         const timer = row.insertCell();
         timer.className = 'num';
@@ -71,7 +84,15 @@
       }
       const cell = row.insertCell();
       cell.className = 'et-actions';
+      // Rows under the entry (its triggers) line up with its own, and leave the arrows' column empty.
+      const before = body.rows.length;
       children?.(body, entry, row.cells.length);
+      if (ordered) {
+        const order = row.insertCell();
+        order.className = 'order-cell';
+        order.appendChild(orderButtons(index, entries.length, (offset) => move(entry, offset), 'this text'));
+        for (const child of [...body.rows].slice(before)) child.insertCell();
+      }
       if (!ctx()?.host) continue;
       for (const [label, title, run] of actions(entry)) {
         const button = make('button', null, label);

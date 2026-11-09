@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using AugurACT.Core.Effects;
 using AugurACT.Core.Encounters;
 using AugurACT.Core.EventTexts;
 using AugurACT.Core.Mechanics;
@@ -25,6 +26,10 @@ namespace AugurACT.Core.Host
         // with a "notice".
         public const string CopyTrigger = "copy-trigger";
         public const string ImportTrigger = "import-trigger";
+
+        // A screenshot or icon for a buff or detrimental: saved to the images folder, and for a screenshot, its
+        // icon and text read. Answered with "effect-image".
+        public const string AddEffectImage = "add-effect-image";
 
         // Requests that edit the encounters data are listed in StoreEditSet.
 
@@ -74,6 +79,48 @@ namespace AugurACT.Core.Host
         // For "copy-trigger" and "import-trigger".
         [DataMember(Name = "trigger")]
         public EventTrigger? Trigger { get; set; }
+
+        // For "add-effect-image": the page's id for the request, the image (base64, any format Windows reads),
+        // and whether it is a tooltip screenshot to read, or an icon to use as it is.
+        [DataMember(Name = "requestId")]
+        public string? RequestId { get; set; }
+
+        [DataMember(Name = "data")]
+        public string? Data { get; set; }
+
+        [DataMember(Name = "asIcon")]
+        public bool AsIcon { get; set; }
+    }
+
+    // What became of an "add-effect-image": the saved image's file name, and for a screenshot the icon found in it
+    // and the text read from it (each null when there was none).
+    [DataContract]
+    public sealed class EffectImageMessage
+    {
+        [DataMember(Name = "type", Order = 0)]
+        public string Type { get; private set; } = "effect-image";
+
+        [DataMember(Name = "requestId", Order = 1)]
+        public string? RequestId { get; set; }
+
+        [DataMember(Name = "file", Order = 2, EmitDefaultValue = false)]
+        public string? File { get; set; }
+
+        [DataMember(Name = "icon", Order = 3, EmitDefaultValue = false)]
+        public string? Icon { get; set; }
+
+        [DataMember(Name = "name", Order = 4, EmitDefaultValue = false)]
+        public string? Name { get; set; }
+
+        [DataMember(Name = "description", Order = 5, EmitDefaultValue = false)]
+        public string? Description { get; set; }
+
+        // Set when the image was saved but its text couldn't be read (no OCR language installed, say).
+        [DataMember(Name = "warning", Order = 6, EmitDefaultValue = false)]
+        public string? Warning { get; set; }
+
+        [DataMember(Name = "error", Order = 7, EmitDefaultValue = false)]
+        public string? Error { get; set; }
     }
 
     // Something to tell the user that changed no data.
@@ -100,6 +147,10 @@ namespace AugurACT.Core.Host
 
         [DataMember(Name = "eventTexts", Order = 1)]
         public EventTextConfig EventTexts { get; set; } = EventTextConfig.Create();
+
+        // Where the page loads buff and detrimental images from (EffectImages).
+        [DataMember(Name = "effectImages", Order = 2)]
+        public string EffectImages { get; set; } = $"https://{Effects.EffectImages.VirtualHost}/";
     }
 
     // One ACT encounter, without its analysis.

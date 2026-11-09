@@ -6,6 +6,7 @@
 //     key: 'eventTexts',
 //     tabs: [{ key, label, render(container) }],   // a tab of its own, rendered again whenever the data changes
 //     recordSection(record) -> Node,                // under each encounter on the Encounters data tab
+//     messages: { 'effect-image': handler(data) },  // plugin messages of its own, by type
 //   });
 //
 // Features talk to the plugin through AugurPage.ctx, set by app.js before any of this runs:

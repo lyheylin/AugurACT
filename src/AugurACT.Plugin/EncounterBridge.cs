@@ -4,9 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Advanced_Combat_Tracker;
+using AugurACT.Core.Effects;
 using AugurACT.Core.Encounters;
 using AugurACT.Core.Host;
 using AugurACT.Core.Mechanics;
+using AugurACT.Ui;
 
 namespace AugurACT.Plugin
 {
@@ -20,6 +22,7 @@ namespace AugurACT.Plugin
         private readonly Action<string> post;
         private readonly Action<string> setStatus;
         private readonly string storePath;
+        private readonly EffectImages images;
         private readonly object gate = new object();
         // User requests go first; background analysis fills in the list's counts when nothing else is waiting.
         private readonly Queue<Action> urgentJobs = new Queue<Action>();
@@ -31,11 +34,12 @@ namespace AugurACT.Plugin
         private ScanOptions? scanOptions;
         private bool stopping;
 
-        public EncounterBridge(Action<string> post, Action<string> setStatus, string storePath)
+        public EncounterBridge(Action<string> post, Action<string> setStatus, string storePath, EffectImages images)
         {
             this.post = post;
             this.setStatus = setStatus;
             this.storePath = storePath;
+            this.images = images;
             worker = new Thread(Work) { IsBackground = true, Name = "AugurACT analysis", Priority = ThreadPriority.BelowNormal };
             worker.Start();
         }
@@ -74,6 +78,11 @@ namespace AugurACT.Plugin
                     break;
                 case HostMessages.ImportTrigger:
                     post(HostMessages.ToJson(ActTriggers.Import(request.Trigger)));
+                    break;
+                // OCR blocks, so it runs on the worker thread with the user's other requests.
+                case HostMessages.AddEffectImage:
+                    var imageRequest = request;
+                    Enqueue(() => AddEffectImage(imageRequest), urgent: true);
                     break;
                 // Edits to the encounters data that features declare in Core (StoreEditSet).
                 case var type when StoreEditSet.TryGet(type, out var edit):
@@ -324,6 +333,22 @@ namespace AugurACT.Plugin
             post(HostMessages.ToJson(message));
         }
 
+        private void AddEffectImage(PageRequest request)
+        {
+            EffectImageMessage message;
+            try
+            {
+                message = EffectImageReader.Add(images, request.RequestId, request.Data, request.AsIcon);
+            }
+            catch (Exception ex)
+            {
+                message = new EffectImageMessage { RequestId = request.RequestId, Error = "Saving the image failed: " + ex.Message };
+                ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: effect image failed");
+            }
+
+            post(HostMessages.ToJson(message));
+        }
+
         private void Reanalyze()
         {
             scanOptions = null;
@@ -376,9 +401,25 @@ namespace AugurACT.Plugin
                     ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: encounters data unreadable");
                     store = new EncounterStore();
                 }
+
+                PruneImages(store);
             }
 
             return store;
+        }
+
+        // Images added to an effect dialog but never saved with an effect, or left behind by a removed one. A day's
+        // grace keeps those of a dialog that is still open.
+        private void PruneImages(EncounterStore current)
+        {
+            try
+            {
+                images.Prune(current, DateTime.UtcNow.AddDays(-1));
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                ActGlobals.oFormActMain.WriteExceptionLog(ex, "AugurACT: pruning effect images failed");
+            }
         }
 
         // ACT's allies decide whose deaths count. ACT changes the list on its parse thread, so a failed read

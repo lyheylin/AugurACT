@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using Advanced_Combat_Tracker;
+using AugurACT.Core.Effects;
 using AugurACT.Ui;
 
 namespace AugurACT.Plugin
@@ -29,9 +30,10 @@ namespace AugurACT.Plugin
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void Start(TabPage pluginScreenSpace)
         {
-            view = new TimelineView(pluginDir, SetStatus) { Dock = DockStyle.Fill };
+            var images = new EffectImages(ConfigPath("AugurACT.images"));
+            view = new TimelineView(pluginDir, images.Folder, SetStatus) { Dock = DockStyle.Fill };
             var target = view;
-            bridge = new EncounterBridge(json => PostToPage(target, json), SetStatus, EncounterStorePath());
+            bridge = new EncounterBridge(json => PostToPage(target, json), SetStatus, ConfigPath("AugurACT.encounters.json"), images);
             view.MessageReceived += bridge.OnPageMessage;
             pluginScreenSpace.Text = "AugurACT";
             pluginScreenSpace.Controls.Add(view);
@@ -69,9 +71,10 @@ namespace AugurACT.Plugin
             }
         }
 
-        // Next to ACT's other plugin settings, so it survives plugin updates and is backed up with them.
-        private static string EncounterStorePath() =>
-            Path.Combine(ActGlobals.oFormActMain.AppDataFolder.FullName, "Config", "AugurACT.encounters.json");
+        // The encounters data and its images go next to ACT's other plugin settings, so they survive plugin
+        // updates and are backed up with them.
+        private static string ConfigPath(string name) =>
+            Path.Combine(ActGlobals.oFormActMain.AppDataFolder.FullName, "Config", name);
 
         private Assembly? ResolveFromPluginDir(object sender, ResolveEventArgs args)
         {

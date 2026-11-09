@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using AugurACT.Core.Effects;
 using AugurACT.Core.EventTexts;
 
 namespace AugurACT.Core.Mechanics
@@ -40,6 +41,12 @@ namespace AugurACT.Core.Mechanics
                     encounter.Bosses ??= new List<NpcRecord>();
                     encounter.Adds ??= new List<NpcRecord>();
                     encounter.EventTexts ??= new List<EventTextRecord>();
+                    encounter.Effects ??= new List<EffectRecord>();
+                    foreach (var effect in encounter.Effects)
+                    {
+                        effect.Screenshots ??= new List<string>();
+                    }
+
                     foreach (var text in encounter.EventTexts)
                     {
                         if (text.Timer != null)
@@ -233,6 +240,10 @@ namespace AugurACT.Core.Mechanics
         // Emotes, NPC speech and narration the user picked as this encounter's, as EventTextTemplate texts.
         [DataMember(Name = "eventTexts", Order = 7)]
         public List<EventTextRecord> EventTexts { get; set; } = new List<EventTextRecord>();
+
+        // Buffs and detrimentals the user recorded by hand, with their tooltips, screenshots and notes.
+        [DataMember(Name = "effects", Order = 8)]
+        public List<EffectRecord> Effects { get; set; } = new List<EffectRecord>();
     }
 
     // One NPC and what is known about its mechanics. More mechanics will add fields here.
