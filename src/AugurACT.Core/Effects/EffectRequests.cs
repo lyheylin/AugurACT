@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using AugurACT.Core.Host;
-using AugurACT.Core.Mechanics;
 
 namespace AugurACT.Core.Effects
 {
@@ -27,8 +25,7 @@ namespace AugurACT.Core.Effects
             // No notice: the list shows the move.
             new StoreEdit<EffectRequest>("move-effect", (r, store, today) =>
             {
-                var encounter = store.FindByName(r.Zone, r.Name) ?? throw new ArgumentException("That encounter isn't in the encounters data.");
-                ListOrder.Move(encounter.Effects, e => string.Equals(e.Name, r.Effect, StringComparison.OrdinalIgnoreCase), r.Offset);
+                store.MoveEffect(r.Zone, r.Name, r.Effect, r.Offset);
                 return new StoreEditResult("");
             }),
         };

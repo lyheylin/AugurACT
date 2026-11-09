@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using AugurACT.Core.Host;
-using AugurACT.Core.Mechanics;
 
 namespace AugurACT.Core.EventTexts
 {
@@ -23,8 +22,7 @@ namespace AugurACT.Core.EventTexts
             // No notice: the list shows the move.
             new StoreEdit<EventTextRequest>("move-event-text", (r, store, today) =>
             {
-                var encounter = store.FindByName(r.Zone, r.Name) ?? throw new ArgumentException("That encounter isn't in the encounters data.");
-                ListOrder.Move(encounter.EventTexts, t => t.Text == r.Text, r.Offset);
+                store.MoveEventText(r.Zone, r.Name, r.Text, r.Offset);
                 return new StoreEditResult("");
             }),
             new StoreEdit<EventTextRequest>("add-event-trigger", (r, store, today) =>

@@ -121,6 +121,13 @@ namespace AugurACT.Core.EventTexts
             return encounter != null && encounter.EventTexts.RemoveAll(t => Same(t.Text, text)) > 0;
         }
 
+        // Moves an event text up (-1) or down (1) the encounter's list.
+        public static void MoveEventText(this EncounterStore store, string? zone, string? name, string? text, int offset)
+        {
+            var encounter = store.FindByName(zone, name) ?? throw new ArgumentException("That encounter isn't in the encounters data.");
+            ListOrder.Move(encounter.EventTexts, t => Same(t.Text, text), offset);
+        }
+
         // Blacklists an event text and drops it from every encounter's list. False when it was already listed.
         public static bool AddToBlacklist(this EncounterStore store, string? kind, string? text, DateTime today)
         {

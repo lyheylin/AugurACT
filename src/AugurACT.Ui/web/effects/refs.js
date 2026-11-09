@@ -6,7 +6,7 @@
 // icon, name, description and notes), not from a screenshot.
 //
 // A name is looked up in the encounter the text belongs to first, then in every recorded encounter. A {Name}
-// that matches nothing stays as it was typed.
+// that matches nothing stays as it was typed. Also shared with effects.js: imageUrl(file) and the KINDS labels.
 window.AugurEffectRefs = (() => {
   const { make } = window.AugurUtil;
   const REF = /\{([^{}\n]+)\}/g;
@@ -125,5 +125,5 @@ window.AugurEffectRefs = (() => {
     if (tip) tip.hidden = true;
   }
 
-  return { text, find };
+  return { text, imageUrl, KINDS };
 })();

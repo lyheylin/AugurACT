@@ -63,6 +63,13 @@ namespace AugurACT.Core.Effects
             encounter.Effects.Remove(record);
         }
 
+        // Moves an effect up (-1) or down (1) the encounter's list.
+        public static void MoveEffect(this EncounterStore store, string? zone, string? name, string? effect, int offset)
+        {
+            var encounter = store.FindByName(zone, name) ?? throw new ArgumentException("That encounter isn't in the encounters data.");
+            ListOrder.Move(encounter.Effects, e => Same(e.Name, effect), offset);
+        }
+
         // Every image file a record names, for EffectImages.Prune.
         public static HashSet<string> ImagesInUse(this EncounterStore store)
         {

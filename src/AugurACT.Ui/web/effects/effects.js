@@ -6,13 +6,12 @@
 // A screenshot goes to the plugin as soon as it's added to the dialog ("add-effect-image"). The plugin saves it,
 // cuts out the icon and reads the tooltip's text with Windows' OCR, and answers with "effect-image": the file
 // names and the text, which fill the dialog's empty fields. Saving sends "save-effect" with the file names.
-// Images load from their own host (AugurPage.config.effectImages).
+// Images load from their own host (AugurPage.config.effectImages). The up / down arrows order the list
+// ("move-effect"), and descriptions and notes show {Name} references (refs.js).
 (() => {
   const { make, plural, orderButtons } = window.AugurUtil;
   const ctx = () => window.AugurPage.ctx;
-  const refs = () => window.AugurEffectRefs;
-  const imageUrl = (file) => `${window.AugurPage.config?.effectImages || 'https://augur-images.act/'}${encodeURIComponent(file)}`;
-  const KINDS = { detrimental: 'Detrimental', buff: 'Buff' };
+  const { text: withRefs, imageUrl, KINDS } = window.AugurEffectRefs;
 
   // ---- the list on the Encounters data tab ----
 
@@ -44,8 +43,8 @@
       const title = make('div', 'fx-title');
       title.append(make('strong', null, effect.name), kindTag(effect.kind));
       main.appendChild(title);
-      if (effect.description) main.appendChild(refs().text(effect.description, record, 'fx-description'));
-      if (effect.notes) main.appendChild(refs().text(effect.notes, record, 'fx-notes'));
+      if (effect.description) main.appendChild(withRefs(effect.description, record, 'fx-description'));
+      if (effect.notes) main.appendChild(withRefs(effect.notes, record, 'fx-notes'));
 
       const shots = row.insertCell();
       shots.className = 'fx-shots';
@@ -183,7 +182,7 @@
 
   let dialog = null;
   const field = (id) => document.getElementById(id);
-  // { record, effect, icon, screenshots: [file], pending: Map(requestId -> 'shot' | 'icon'), read: { name, description } }
+  // { record, effect, icon, screenshots: [file], pending: Map(requestId -> 'shot' | 'icon') }
   let state = null;
   let nextRequest = 1;
 

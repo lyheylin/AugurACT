@@ -33,7 +33,7 @@ namespace AugurACT.Core.Effects
     {
         private static readonly Regex Header = new Regex(@"^Eff\S{0,5}\s?[:;.]?$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
         private static readonly Regex Word = new Regex("[A-Za-z]{2,}", RegexOptions.CultureInvariant);
-        private static readonly Regex CleanWord = new Regex(@"^[(""'‘“]?[A-Za-z]+(?:'[a-z]+)?[)""'’”.,!?:;]*$", RegexOptions.CultureInvariant);
+        private static readonly Regex CleanWord = new Regex(@"^[(""'\u2018\u201C]?[A-Za-z]+(?:'[a-z]+)?[)""'\u2019\u201D.,!?:;]*$", RegexOptions.CultureInvariant);
         private static readonly Regex CleanNumber = new Regex(@"^\d{1,3}(?:,\d{3})*(?:\.\d+)?%?[.,]?$|^\d+(?:\.\d+)?%?[.,]?$", RegexOptions.CultureInvariant);
 
         // How much of a reading looks like real text: letters of whole words and digits of well-formed numbers
@@ -48,7 +48,7 @@ namespace AugurACT.Core.Effects
                 {
                     score += token.Count(char.IsLetterOrDigit);
                 }
-                else if (token == "-" || token == "–" || token.All(IsBulletMark))
+                else if (token == "-" || token == "\u2013" || token.All(IsBulletMark))
                 {
                     // A dash or a bullet: neither helps nor hurts.
                 }
@@ -100,7 +100,7 @@ namespace AugurACT.Core.Effects
             return new TooltipText
             {
                 Name = title >= 0 ? text[title].Text : "",
-                Description = string.Join("\n", items.Select(i => "• " + i)),
+                Description = string.Join("\n", items.Select(i => "\u2022 " + i)),
             };
         }
 
@@ -122,7 +122,7 @@ namespace AugurACT.Core.Effects
 
         // Characters that are only ever a bullet at the start of a line, never text. Fonts with a symbol bullet
         // give one from Unicode's private use area.
-        private static bool IsBulletOnly(char c) => c == '•' || c == '·' || c == '◦' || c == '▪' || (c >= '' && c <= '');
+        private static bool IsBulletOnly(char c) => c == '\u2022' || c == '\u00B7' || c == '\u25E6' || c == '\u25AA' || (c >= '\uE000' && c <= '\uF8FF');
 
         private static bool EndsSentence(StringBuilder text)
         {
