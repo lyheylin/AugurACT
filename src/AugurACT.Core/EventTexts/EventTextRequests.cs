@@ -31,7 +31,7 @@ namespace AugurACT.Core.EventTexts
                 switch (store.SaveTrigger(r.Zone, r.Name, r.Entry ?? new EventTextEdit(), trigger, today))
                 {
                     case EventTextStore.TriggerSaved.AddedWithText: return new StoreEditResult($"Event text and its trigger added to {r.Name}.");
-                    case EventTextStore.TriggerSaved.Replaced: return new StoreEditResult($"Trigger updated in {r.Name}.");
+                    case EventTextStore.TriggerSaved.AlreadyThere: return new StoreEditResult($"{r.Name} already has that trigger.");
                     default: return new StoreEditResult($"Trigger added to {r.Name}.");
                 }
             }),

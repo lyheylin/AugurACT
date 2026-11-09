@@ -53,8 +53,9 @@ namespace AugurACT.Core.EventTexts
             return isNew;
         }
 
-        // Adds a trigger to an encounter's event text, found by its text, or replaces the one with the same regex and
-        // category. A text the encounter doesn't list yet (a trigger made from a fight's list) is added with it.
+        // Adds a trigger to an encounter's event text, found by its text, next to any it already has. One the same in
+        // every setting isn't added twice. A text the encounter doesn't list yet (a trigger made from a fight's list)
+        // is added with it.
         public static TriggerSaved SaveTrigger(this EncounterStore store, string? zone, string? name, EventTextEdit text, EventTrigger trigger, DateTime today)
         {
             var encounter = store.FindByName(zone, name) ?? throw new ArgumentException("That encounter isn't in the encounters data.");
@@ -75,12 +76,9 @@ namespace AugurACT.Core.EventTexts
 
             RefreshRegex(record, encounter);
             record.Triggers ??= new List<EventTrigger>();
-            var index = record.Triggers.FindIndex(t => t.SameAs(checkedTrigger));
-            if (index >= 0)
+            if (record.Triggers.Any(t => t.SameAs(checkedTrigger)))
             {
-                checkedTrigger.Added = record.Triggers[index].Added;
-                record.Triggers[index] = checkedTrigger;
-                return TriggerSaved.Replaced;
+                return TriggerSaved.AlreadyThere;
             }
 
             checkedTrigger.Added = today.ToString("yyyy-MM-dd");
@@ -88,6 +86,7 @@ namespace AugurACT.Core.EventTexts
             return textAdded ? TriggerSaved.AddedWithText : TriggerSaved.Added;
         }
 
+        // Removes one trigger the same as the given one in every setting.
         public static bool RemoveTrigger(this EncounterStore store, string? zone, string? name, string? text, EventTrigger? trigger)
         {
             var record = store.FindByName(zone, name)?.EventTexts.FirstOrDefault(t => Same(t.Text, text));
@@ -96,13 +95,18 @@ namespace AugurACT.Core.EventTexts
                 return false;
             }
 
-            var removed = record.Triggers.RemoveAll(t => t.SameAs(trigger)) > 0;
+            var index = record.Triggers.FindIndex(t => t.SameAs(trigger));
+            if (index >= 0)
+            {
+                record.Triggers.RemoveAt(index);
+            }
+
             if (record.Triggers.Count == 0)
             {
                 record.Triggers = null;
             }
 
-            return removed;
+            return index >= 0;
         }
 
         // Builds the regex a new trigger for the text starts from: from its log line, or from the text and the
@@ -168,7 +172,7 @@ namespace AugurACT.Core.EventTexts
         {
             Added,
             AddedWithText,
-            Replaced,
+            AlreadyThere,
         }
 
         private static EventTextRecord Check(string? kind, string? text)
